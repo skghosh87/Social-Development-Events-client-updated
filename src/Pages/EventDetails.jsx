@@ -14,7 +14,9 @@ import {
 } from "react-icons/fa";
 import { useAuth } from "../Hooks/useAuth";
 
-const SERVER_BASE_URL = "social-development-events-seven.vercel.app";
+const SERVER_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://social-development-events-seven.vercel.app";
 
 const EventDetails = () => {
   const { id } = useParams();

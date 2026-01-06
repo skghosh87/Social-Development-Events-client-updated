@@ -23,7 +23,7 @@ const AllEvents = () => {
     try {
       // অ্যাডমিন হিসেবে সব ইভেন্ট নিয়ে আসার API
       const res = await axios.get(
-        "social-development-events-seven.vercel.app/api/admin/all-events"
+        "https://social-development-events-seven.vercel.app/api/admin/all-events"
       );
       setEvents(res.data);
       setLoading(false);
@@ -47,7 +47,7 @@ const AllEvents = () => {
       if (result.isConfirmed) {
         try {
           const res = await axios.delete(
-            `social-development-events-seven.vercel.app/api/events/${id}?organizerEmail=admin`
+            `https://social-development-events-seven.vercel.app/api/events/${id}?organizerEmail=admin`
           );
           if (res.data.success) {
             toast.success("Event deleted by Admin");

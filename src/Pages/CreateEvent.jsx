@@ -35,7 +35,7 @@ const CreateEvent = () => {
   const ORGANIZER_FEE = 5; // অর্গানাইজারের জন্য ফিক্সড ফি $৫.০০
   const SERVER_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ||
-    "social-development-events-seven.vercel.app";
+    "https://social-development-events-seven.vercel.app";
 
   // ১. ফর্ম সাবমিট হ্যান্ডলার (পেমেন্টের আগে ডাটা টেম্পোরারি সেভ করা)
   const handleFormSubmit = (e) => {

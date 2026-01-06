@@ -14,6 +14,7 @@ const Register = () => {
     createUser,
     updateUserProfile,
     signInWithGoogle,
+    logOut, // সেশন ক্লিয়ার করার জন্য লগআউট ইম্পোর্ট করা হলো
     setLoading,
     loading,
   } = useAuth();
@@ -57,15 +58,18 @@ const Register = () => {
       await createUser(email, password);
       await updateUserProfile(name, photoURL);
 
-      // ২. ব্যাকএন্ডে ইউজার ডেটা পাঠানো (লিংকে https:// যুক্ত করা হয়েছে)
+      // ২. ব্যাকএন্ডে ইউজার ডেটা পাঠানো (https:// সহ)
       const newUser = { name, email, photoURL, role: "user", status: "active" };
       await axios.post(
         "https://social-development-events-seven.vercel.app/api/users",
         newUser
       );
 
-      toast.success("Registration Successful!");
-      navigate("/");
+      // ৩. ফায়ারবেস অটো-লগইন ক্লিয়ার করা (ঐচ্ছিক কিন্তু ভালো প্র্যাকটিস)
+      await logOut();
+
+      toast.success("Registration Successful! Please login to continue.");
+      navigate("/login"); // লগইন পেজে রিডাইরেক্ট
     } catch (error) {
       toast.error(parseFirebaseError(error));
     } finally {
@@ -86,13 +90,18 @@ const Register = () => {
         role: "user",
         status: "active",
       };
+
+      // ব্যাকএন্ডে সেভ করা
       await axios.post(
         "https://social-development-events-seven.vercel.app/api/users",
         newUser
       );
 
-      toast.success("Google Sign-Up Successful!");
-      navigate("/");
+      // গুগল সাইন-আপের পর সেশন ক্লিয়ার করে লগইন পেজে পাঠানো
+      await logOut();
+
+      toast.success("Account created with Google! Please login now.");
+      navigate("/login");
     } catch (error) {
       toast.error("Google sign-up failed");
     } finally {
@@ -122,7 +131,6 @@ const Register = () => {
               />
             </div>
 
-            {/* ছবি ইনপুট ফিল্ড (নতুন যোগ করা হয়েছে) */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Photo URL (Optional)
@@ -186,16 +194,19 @@ const Register = () => {
               <FaGoogle className="mr-2 text-red-500" /> Sign up with Google
             </button>
 
-            <p className="text-center text-sm mt-4">
+            <p className="text-center text-sm mt-4 text-gray-600">
               Already have an account?{" "}
-              <Link to="/login" className="text-green-600 font-bold">
+              <Link
+                to="/login"
+                className="text-green-600 font-bold hover:underline"
+              >
                 Login Here
               </Link>
             </p>
           </form>
         </div>
       </Container>
-      <ToastContainer />
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 };

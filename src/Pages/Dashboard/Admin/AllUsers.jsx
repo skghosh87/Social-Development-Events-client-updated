@@ -15,7 +15,7 @@ const AllUsers = () => {
   const fetchUsers = async () => {
     try {
       const res = await axios.get(
-        "social-development-events-seven.vercel.app/api/users"
+        "https://social-development-events-seven.vercel.app/api/users"
       );
       setUsers(res.data);
       setLoading(false);
@@ -29,7 +29,7 @@ const AllUsers = () => {
   const handleMakeAdmin = async (id) => {
     try {
       const res = await axios.patch(
-        `social-development-events-seven.vercel.app/api/users/role/${id}`,
+        `https://social-development-events-seven.vercel.app/api/users/role/${id}`,
         { role: "admin" }
       );
       if (res.data.modifiedCount > 0) {
@@ -45,7 +45,7 @@ const AllUsers = () => {
   const handleStatusChange = async (id, newStatus) => {
     try {
       const res = await axios.patch(
-        `social-development-events-seven.vercel.app/api/users/status/${id}`,
+        `https://social-development-events-seven.vercel.app/api/users/status/${id}`,
         { status: newStatus }
       );
       if (res.data.modifiedCount > 0) {

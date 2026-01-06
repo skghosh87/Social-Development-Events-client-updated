@@ -68,7 +68,7 @@ const AuthProvider = ({ children }) => {
         try {
           // আপনার ব্যাকএন্ড থেকে ইউজারের রোল এবং স্ট্যাটাস চেক করা
           const res = await axios.get(
-            `social-development-events-seven.vercel.app/api/users/role/${currentUser.email}`
+            `https://social-development-events-seven.vercel.app/api/users/role/${currentUser.email}`
           );
           setRole(res.data.role);
           setStatus(res.data.status);

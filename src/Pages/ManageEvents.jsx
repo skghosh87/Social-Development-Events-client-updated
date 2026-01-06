@@ -11,7 +11,7 @@ import { useAuth } from "../Hooks/useAuth";
 
 const SERVER_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  "social-development-events-seven.vercel.app";
+  "https://social-development-events-seven.vercel.app";
 
 const ManageEvents = () => {
   const { user, loading } = useAuth();
