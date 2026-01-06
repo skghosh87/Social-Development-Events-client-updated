@@ -12,7 +12,8 @@ import {
 import { Link } from "react-router-dom";
 
 const SERVER_BASE_URL =
-  "https://social-development-events-server-ten.vercel.app";
+  import.meta.env.VITE_API_BASE_URL ||
+  "social-development-events-seven.vercel.app";
 
 const UpcomingEvents = () => {
   const [events, setEvents] = useState([]);

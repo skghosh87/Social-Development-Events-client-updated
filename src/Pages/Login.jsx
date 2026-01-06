@@ -9,7 +9,7 @@ import {
 import { IoEyeOff } from "react-icons/io5";
 import { FcGoogle } from "react-icons/fc";
 import { toast } from "react-toastify";
-import { useAuth } from "../Context/AuthProvider";
+import { useAuth } from "../Hooks/useAuth";
 
 const Login = () => {
   const [show, setShow] = useState(false);

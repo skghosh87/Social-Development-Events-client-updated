@@ -2,9 +2,10 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import logo from "/Logo.png";
 import { toast } from "react-toastify";
 import { useEffect, useState } from "react";
-import { useAuth } from "../Context/AuthProvider";
+
 import Container from "./Container";
 import { FaUserCircle, FaSignOutAlt, FaTachometerAlt } from "react-icons/fa";
+import { useAuth } from "../Hooks/useAuth";
 
 const DEFAULT_AVATAR = "/default-user.png";
 
@@ -197,7 +198,7 @@ const Navbar = () => {
               </ul>
             </div>
           ) : (
-            <Link to="/login" className="btn-pro text-sm px-6">
+            <Link to="/login" className="btn-pro text-sm px-6 rounded-lg">
               Login
             </Link>
           )}

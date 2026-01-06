@@ -6,7 +6,7 @@ import { FaCreditCard, FaLock } from "react-icons/fa";
 
 const SERVER_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  "https://social-development-events-server-ten.vercel.app";
+  "social-development-events-seven.vercel.app";
 
 const CheckoutForm = ({ price, onPaymentSuccess }) => {
   const stripe = useStripe();

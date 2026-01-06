@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-import { useAuth } from "../Context/AuthProvider";
 import Container from "../Components/Container";
 import {
   FaCalendarAlt,
@@ -13,9 +12,9 @@ import {
   FaCheckCircle,
   FaExclamationCircle,
 } from "react-icons/fa";
+import { useAuth } from "../Hooks/useAuth";
 
-const SERVER_BASE_URL =
-  "https://social-development-events-server-ten.vercel.app";
+const SERVER_BASE_URL = "social-development-events-seven.vercel.app";
 
 const EventDetails = () => {
   const { id } = useParams();

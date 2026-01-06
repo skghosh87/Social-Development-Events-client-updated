@@ -3,14 +3,20 @@ import { FaEye, FaGoogle, FaUserPlus } from "react-icons/fa";
 import { IoEyeOff } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
+import axios from "axios"; // ইম্পোর্ট নিশ্চিত করুন
 import "react-toastify/dist/ReactToastify.css";
-import { useAuth } from "../Context/AuthProvider";
+
 import Container from "../Components/Container";
+import { useAuth } from "../Hooks/useAuth";
 
 const Register = () => {
-  const { createUser, updateUserProfile, signInWithGoogle, setLoading } =
-    useAuth();
-
+  const {
+    createUser,
+    updateUserProfile,
+    signInWithGoogle,
+    setLoading,
+    loading,
+  } = useAuth();
   const [show, setShow] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const navigate = useNavigate();
@@ -21,7 +27,6 @@ const Register = () => {
       .replace(").", "")
       .replaceAll("-", " ")
       .trim();
-
     if (errorMessage.includes("email already in use")) {
       errorMessage = "This email is already registered. Please sign in.";
     }
@@ -38,29 +43,31 @@ const Register = () => {
     const password = form.get("password");
 
     setPasswordError("");
-
-    const validationMessage =
-      "Password must be at least 6 characters long and include one uppercase and one lowercase letter.";
     const regExp = /^(?=.*[a-z])(?=.*[A-Z]).{6,}$/;
 
     if (!regExp.test(password)) {
-      setPasswordError(validationMessage);
-      toast.error(validationMessage, { position: "top-center" });
-      return;
+      const msg = "Password must be 6+ chars, 1 uppercase & 1 lowercase.";
+      setPasswordError(msg);
+      return toast.error(msg);
     }
 
     try {
       setLoading(true);
+      // ১. ফায়ারবেসে ইউজার তৈরি
       await createUser(email, password);
       await updateUserProfile(name, photoURL);
 
-      toast.success("Registration Successful! Welcome to SDEP", {
-        position: "top-center",
-      });
+      // ২. ব্যাকএন্ডে ইউজার ডেটা পাঠানো
+      const newUser = { name, email, photoURL, role: "user", status: "active" };
+      await axios.post(
+        "social-development-events-seven.vercel.app/api/users",
+        newUser
+      );
+
+      toast.success("Registration Successful!");
       navigate("/");
     } catch (error) {
-      const errorMessage = parseFirebaseError(error);
-      toast.error(errorMessage, { position: "top-center" });
+      toast.error(parseFirebaseError(error));
     } finally {
       setLoading(false);
     }
@@ -69,142 +76,110 @@ const Register = () => {
   const handleGoogleSignup = async () => {
     try {
       setLoading(true);
-      await signInWithGoogle();
-      toast.success("Google Sign-Up Successful!", { position: "top-center" });
+      const result = await signInWithGoogle();
+      const user = result.user;
+
+      // গুগল ইউজারকে ডাটাবেজে সেভ (Upsert লজিক ব্যাকএন্ডে থাকবে)
+      const newUser = {
+        name: user.displayName,
+        email: user.email,
+        photoURL: user.photoURL,
+        role: "user",
+        status: "active",
+      };
+      await axios.post(
+        "social-development-events-seven.vercel.app/api/users",
+        newUser
+      );
+
+      toast.success("Google Sign-Up Successful!");
       navigate("/");
     } catch (error) {
-      const errorMessage = parseFirebaseError(error);
-      toast.error(`Google sign-up failed: ${errorMessage}`, {
-        position: "top-center",
-      });
+      toast.error("Google sign-up failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
       <Container className="flex items-center justify-center">
-        <div className="w-full max-w-lg bg-white p-8 rounded-xl shadow-2xl border border-green-200">
+        <div className="w-full max-w-lg bg-white p-8 rounded-xl shadow-2xl border border-green-100">
           <h2 className="text-3xl font-bold text-center text-green-700 mb-6 flex items-center justify-center gap-2">
-            <FaUserPlus className="text-green-500 text-3xl" /> Create Your
-            Account
+            <FaUserPlus /> Create Account
           </h2>
 
           <form onSubmit={handleSignup} className="space-y-4">
             <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label className="block text-sm font-medium text-gray-700">
                 Full Name
               </label>
               <input
-                id="name"
                 type="text"
                 name="name"
                 placeholder="Your Name"
-                className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-150"
+                className="mt-1 w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                 required
               />
             </div>
 
             <div>
-              <label
-                htmlFor="photo"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Photo URL (Optional)
-              </label>
-              <input
-                id="photo"
-                type="text"
-                name="photo"
-                placeholder="Your photo URL"
-                className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-150"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label className="block text-sm font-medium text-gray-700">
                 Email
               </label>
               <input
-                id="email"
                 type="email"
                 name="email"
                 placeholder="example@email.com"
-                className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-150"
+                className="mt-1 w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                 required
               />
             </div>
 
             <div className="relative">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label className="block text-sm font-medium text-gray-700">
                 Password
               </label>
               <input
-                id="password"
                 type={show ? "text" : "password"}
                 name="password"
                 placeholder="••••••••"
-                className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-150"
+                className="mt-1 w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                 required
               />
               <span
                 onClick={() => setShow(!show)}
-                className="absolute right-3 top-1/2 mt-2 cursor-pointer text-green-600 text-xl"
+                className="absolute right-3 top-[42px] cursor-pointer text-gray-500 text-xl"
               >
                 {show ? <IoEyeOff /> : <FaEye />}
               </span>
             </div>
 
-            {passwordError && (
-              <p className="mt-1 text-sm text-red-600 font-medium">
-                {passwordError}
-              </p>
-            )}
-
             <button
               type="submit"
-              className="w-full py-3 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition duration-300 shadow-md"
+              disabled={loading}
+              className="w-full py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition disabled:bg-gray-400"
             >
-              Register Account
+              {loading ? "Registering..." : "Register Account"}
             </button>
 
-            <div className="mt-5 border-t border-gray-200 pt-5">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <div className="h-px w-full bg-gray-200"></div>
-                <span className="text-sm text-gray-500">OR</span>
-                <div className="h-px w-full bg-gray-200"></div>
-              </div>
-              <button
-                onClick={handleGoogleSignup}
-                type="button"
-                className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 transition duration-150"
-              >
-                <FaGoogle className="mr-3 text-red-500 text-xl" />
-                Sign up with Google
-              </button>
-            </div>
+            <div className="divider text-xs text-gray-400">OR</div>
 
-            <div className="text-center mt-3">
-              <p className="text-sm text-gray-500">
-                Already have an account?
-                <Link
-                  to="/login"
-                  className="text-green-600 hover:underline font-medium ml-1"
-                >
-                  Login Here
-                </Link>
-              </p>
-            </div>
+            <button
+              onClick={handleGoogleSignup}
+              type="button"
+              disabled={loading}
+              className="w-full flex items-center justify-center py-2 border rounded-lg hover:bg-gray-50 transition"
+            >
+              <FaGoogle className="mr-2 text-red-500" /> Sign up with Google
+            </button>
+
+            <p className="text-center text-sm mt-4">
+              Already have an account?{" "}
+              <Link to="/login" className="text-green-600 font-bold">
+                Login Here
+              </Link>
+            </p>
           </form>
         </div>
       </Container>

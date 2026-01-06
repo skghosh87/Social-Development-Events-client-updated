@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../Context/AuthProvider";
+
 import Container from "../Components/Container";
 import { FaEdit, FaTrash, FaCalendarCheck } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -7,10 +7,11 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
 import UpdateEventModal from "../Components/UpdateEventModal";
+import { useAuth } from "../Hooks/useAuth";
 
 const SERVER_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  "https://social-development-events-server-ten.vercel.app";
+  "social-development-events-seven.vercel.app";
 
 const ManageEvents = () => {
   const { user, loading } = useAuth();

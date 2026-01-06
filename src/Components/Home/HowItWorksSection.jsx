@@ -87,7 +87,7 @@ const HowItWorksSection = () => {
 
         {/* জয়েনিং বাটন */}
         <div className="mt-16 flex justify-center">
-          <button className="btn-pro px-10 py-4 shadow-xl hover:shadow-secondary/20 transition-all active:scale-95">
+          <button className="btn-pro px-10 py-4 shadow-xl rounded-lg hover:shadow-secondary/20 transition-all active:scale-95">
             Start Your Journey
           </button>
         </div>

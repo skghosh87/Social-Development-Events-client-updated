@@ -1,7 +1,8 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router";
+import { useAuth } from "../Hooks/useAuth";
 
-import { useAuth } from "../Context/AuthProvider";
+// import { useAuth } from "../Context/AuthProvider";
 
 const PrivateRoute = ({ children }) => {
   // FIX: useAuth হুক ব্যবহার করা হলো

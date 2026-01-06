@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../Context/AuthProvider";
+
 import axios from "axios";
 import { toast } from "react-toastify";
 import Container from "../Components/Container";
@@ -13,10 +13,11 @@ import {
   FaHashtag,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import { useAuth } from "../Hooks/useAuth";
 
 const SERVER_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  "https://social-development-events-server-ten.vercel.app";
+  "social-development-events-seven.vercel.app";
 
 const JoinedEvents = () => {
   const { user, loading: authLoading } = useAuth();

@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../Context/AuthProvider";
 import { toast } from "react-toastify";
+import axios from "axios";
 import {
   FaTachometerAlt,
   FaPlusCircle,
@@ -12,12 +12,27 @@ import {
   FaBars,
   FaTimes,
   FaHome,
+  FaUsersCog, // নতুন আইকন
 } from "react-icons/fa";
+import { useAuth } from "../Hooks/useAuth";
 
 const DashboardLayout = () => {
   const { user, logOut } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [dbUser, setDbUser] = useState(null); // ডাটাবেজ থেকে ইউজারের তথ্য রাখার জন্য
   const navigate = useNavigate();
+
+  // ডাটাবেজ থেকে ইউজারের রোল ফেচ করা
+  useEffect(() => {
+    if (user?.email) {
+      axios
+        .get(
+          `social-development-events-seven.vercel.app/api/users/role/${user.email}`
+        )
+        .then((res) => setDbUser(res.data))
+        .catch((err) => console.error("Error fetching role:", err));
+    }
+  }, [user?.email]);
 
   const handleSignout = () => {
     logOut()
@@ -28,7 +43,6 @@ const DashboardLayout = () => {
       .catch((e) => toast.error(e.message));
   };
 
-  // ড্যাশবোর্ড মেনু লিন্ক স্টাইল
   const navStyles = ({ isActive }) =>
     `flex items-center gap-3 px-6 py-3 transition-all duration-300 rounded-lg mx-2 ${
       isActive
@@ -36,38 +50,54 @@ const DashboardLayout = () => {
         : "text-slate-400 hover:bg-slate-800 hover:text-white"
     }`;
 
+  // রোল অনুযায়ী মেনু ফিল্টার করা
   const sidebarLinks = (
     <div className="flex flex-col h-full justify-between py-6">
       <ul className="space-y-2">
-        {/* সবার জন্য (Requirement 7: Sidebar Menu) */}
+        {/* সবার জন্য (Common for All) */}
         <li>
           <NavLink to="/dashboard" end className={navStyles}>
             <FaTachometerAlt /> Overview
           </NavLink>
         </li>
-        <li>
-          <NavLink to="/dashboard/joined-events" className={navStyles}>
-            <FaHistory /> Joined Events
-          </NavLink>
-        </li>
 
-        {/* অ্যাডমিন/অর্গানাইজারদের জন্য (Requirement 7: Min 3 items) */}
-        <div className="pt-4 mt-4 border-t border-slate-800">
-          <p className="px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Organizer Tools
-          </p>
+        {/* শুধুমাত্র General User-দের জন্য */}
+        {dbUser?.role === "user" && (
           <li>
-            <NavLink to="/dashboard/create-event" className={navStyles}>
-              <FaPlusCircle /> Create Event
+            <NavLink to="/dashboard/joined-events" className={navStyles}>
+              <FaHistory /> Joined Events
             </NavLink>
           </li>
-          <li>
-            <NavLink to="/dashboard/manage-events" className={navStyles}>
-              <FaTasks /> Manage My Events
-            </NavLink>
-          </li>
-        </div>
+        )}
 
+        {/* শুধুমাত্র Admin/Organizer-দের জন্য (Conditional Rendering) */}
+        {(dbUser?.role === "admin" || dbUser?.role === "organizer") && (
+          <div className="pt-4 mt-4 border-t border-slate-800">
+            <p className="px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              Management Tools
+            </p>
+            <li>
+              <NavLink to="/dashboard/create-event" className={navStyles}>
+                <FaPlusCircle /> Create Event
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/dashboard/manage-events" className={navStyles}>
+                <FaTasks /> Manage My Events
+              </NavLink>
+            </li>
+            {/* যদি শুধুমাত্র Admin হয় তবে 'Manage Users' দেখাবে */}
+            {dbUser?.role === "admin" && (
+              <li>
+                <NavLink to="/dashboard/all-users" className={navStyles}>
+                  <FaUsersCog /> Manage Users
+                </NavLink>
+              </li>
+            )}
+          </div>
+        )}
+
+        {/* অ্যাকাউন্ট সেকশন (সবার জন্য) */}
         <div className="pt-4 mt-4 border-t border-slate-800">
           <p className="px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Account
@@ -80,7 +110,6 @@ const DashboardLayout = () => {
         </div>
       </ul>
 
-      {/* নিচের অংশ */}
       <div className="px-4 space-y-2">
         <Link
           to="/"
@@ -100,22 +129,22 @@ const DashboardLayout = () => {
 
   return (
     <div className="flex min-h-screen bg-base-200 dark:bg-slate-950">
-      {/* ১. সাইডবার (ডেস্কটপ) */}
-      <aside className="hidden lg:flex flex-col w-72 bg-primary text-white sticky top-0 h-screen shadow-2xl">
+      {/* ডেস্কটপ সাইডবার */}
+      <aside className="hidden lg:flex flex-col w-72 bg-primary text-white sticky top-0 h-screen shadow-2xl transition-all duration-300">
         <div className="p-8 border-b border-slate-800">
           <Link to="/" className="flex items-center gap-2">
             <span className="font-extrabold text-2xl tracking-tight">
               SDEP<span className="text-secondary">.</span>
             </span>
-            <span className="text-[10px] bg-secondary/20 text-secondary px-2 py-0.5 rounded-full font-bold">
-              DASHBOARD
+            <span className="text-[10px] bg-secondary/20 text-secondary px-2 py-0.5 rounded-full font-bold uppercase">
+              {dbUser?.role || "Loading..."}
             </span>
           </Link>
         </div>
         {sidebarLinks}
       </aside>
 
-      {/* ২. মোবাইল সাইডবার (Overlay) */}
+      {/* মোবাইল সাইডবার (Overlay) - আগের মতোই থাকবে */}
       <div
         className={`lg:hidden fixed inset-0 z-[100] transition-opacity duration-300 ${
           isSidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
@@ -130,12 +159,9 @@ const DashboardLayout = () => {
             isSidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="p-6 flex justify-between items-center border-b border-slate-800">
-            <span className="font-bold text-white">SDEP Dashboard</span>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="text-white"
-            >
+          <div className="p-6 flex justify-between items-center border-b border-slate-800 text-white font-bold">
+            <span>SDEP Dashboard</span>
+            <button onClick={() => setIsSidebarOpen(false)}>
               <FaTimes size={20} />
             </button>
           </div>
@@ -143,9 +169,8 @@ const DashboardLayout = () => {
         </aside>
       </div>
 
-      {/* ৩. মেইন কন্টেন্ট এরিয়া */}
+      {/* মেইন কন্টেন্ট */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* টপ নেভিগেশন (Requirement 7: Top Navbar) */}
         <header className="h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 sticky top-0 z-40">
           <div className="flex items-center gap-4">
             <button
@@ -164,8 +189,8 @@ const DashboardLayout = () => {
               <p className="text-sm font-bold text-primary dark:text-white">
                 {user?.displayName}
               </p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest">
-                General User
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+                {dbUser?.role || "User"}
               </p>
             </div>
             <img
@@ -176,7 +201,6 @@ const DashboardLayout = () => {
           </div>
         </header>
 
-        {/* ডায়নামিক পেজ কন্টেন্ট */}
         <div className="p-6 md:p-10 flex-1 overflow-y-auto">
           <Outlet />
         </div>

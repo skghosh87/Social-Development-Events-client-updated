@@ -89,7 +89,7 @@ const SuccessStatsSection = () => {
 
         {/* ৩. কল টু অ্যাকশন বাটন */}
         <div className="mt-16 flex justify-center">
-          <button className="btn-pro px-12 py-4 text-lg shadow-xl hover:shadow-secondary/20 transition-all active:scale-95 cursor-pointer">
+          <button className="btn-pro px-12 py-4 text-lg shadow-xl hover:shadow-secondary/20 transition-all active:scale-95 cursor-pointer rounded-lg">
             Become a Volunteer
           </button>
         </div>

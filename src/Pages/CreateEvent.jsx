@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Container from "../Components/Container";
-import { useAuth } from "../Context/AuthProvider";
+
 import {
   FaCalendarPlus,
   FaRegCalendarAlt,
@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import CheckoutForm from "../Components/CheckoutForm";
+import { useAuth } from "../Hooks/useAuth";
 
 // আপনার Stripe Publishable Key এখানে দিন (Vite এর জন্য VITE_ prefix ব্যবহার করা হয়েছে)
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -34,7 +35,7 @@ const CreateEvent = () => {
   const ORGANIZER_FEE = 5; // অর্গানাইজারের জন্য ফিক্সড ফি $৫.০০
   const SERVER_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ||
-    "https://social-development-events-server-ten.vercel.app";
+    "social-development-events-seven.vercel.app";
 
   // ১. ফর্ম সাবমিট হ্যান্ডলার (পেমেন্টের আগে ডাটা টেম্পোরারি সেভ করা)
   const handleFormSubmit = (e) => {
