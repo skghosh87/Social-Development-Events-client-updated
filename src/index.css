@@ -1,0 +1,107 @@
+@import "tailwindcss";
+@import "swiper/css";
+@import "swiper/css/navigation";
+
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+}
+
+@theme {
+  /* --- ১. কালার প্যালেট --- */
+  --color-primary: #1e293b;
+  --color-secondary: #3b82f6;
+  --color-accent: #10b981;
+
+  /* --- ২. নিউট্রাল ও ব্যাকগ্রাউন্ড কালার --- */
+  --color-neutral-content: #64748b;
+  --color-base-100: #ffffff;
+  --color-base-200: #f8fafc;
+  --color-base-300: #f1f5f9;
+
+  /* --- ৩. কনসিস্টেন্ট ডিজাইন রুলস --- */
+  --radius-btn: 8px;
+  --radius-card: 12px;
+  --shadow-standard: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* --- ৪. গ্লোবাল ইউআই স্টাইল --- */
+@layer base {
+  body {
+    @apply bg-base-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased;
+    font-family: "Inter", sans-serif;
+  }
+
+  /* সংশোধন: এখানে শুধুমাত্র text-primary দিলে সব h1 নীল হয়ে যায়। 
+     তাই আমরা এমনভাবে লিখব যেন ক্লাসের মাধ্যমে কালার কন্ট্রোল করা যায়।
+  */
+  h1,
+  h2,
+  h3 {
+    @apply font-bold tracking-tight;
+  }
+
+  /* ডিফল্ট কালার (ব্যানারের বাইরের জন্য) */
+  :not(.text-white) > h1,
+  :not(.text-white) > h2,
+  :not(.text-white) > h3 {
+    @apply text-primary dark:text-white;
+  }
+}
+
+/* --- ৫. রিইউজেবল প্রফেশনাল কম্পোনেন্টস --- */
+@layer components {
+  .card-pro {
+    @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 
+           rounded-[--radius-card] shadow-[--shadow-standard] overflow-hidden 
+           transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  .btn-pro {
+    @apply bg-secondary hover:bg-blue-700 text-white font-bold py-2 px-6 
+           rounded-[--radius-btn] transition-all active:scale-95 disabled:opacity-50
+           flex items-center justify-center gap-2;
+  }
+
+  .input-pro {
+    @apply w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 
+           rounded-[--radius-btn] p-3 outline-none focus:ring-2 focus:ring-secondary/50 
+           focus:border-secondary transition-all;
+  }
+
+  .skeleton-pro {
+    @apply animate-pulse bg-slate-200 dark:bg-slate-800 rounded-md;
+  }
+}
+
+/* --- ৬. ড্যাশবোর্ড স্পেসিফিক স্টাইল --- */
+.dashboard-sidebar {
+  @apply bg-primary text-white h-screen sticky top-0 overflow-y-auto;
+}
+
+.dashboard-content {
+  @apply bg-base-200 dark:bg-slate-950 min-h-screen p-6;
+}
+
+/* Swiper কাস্টমাইজেশন */
+.swiper-button-next,
+.swiper-button-prev {
+  color: var(--color-secondary) !important;
+}
+
+/* কাস্টম এনিমেশন ফর ব্যানার */
+.animate-fadeIn {
+  animation: fadeIn 1.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
