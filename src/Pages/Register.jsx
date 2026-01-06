@@ -3,7 +3,7 @@ import { FaEye, FaGoogle, FaUserPlus } from "react-icons/fa";
 import { IoEyeOff } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
-import axios from "axios"; // ইম্পোর্ট নিশ্চিত করুন
+import axios from "axios";
 import "react-toastify/dist/ReactToastify.css";
 
 import Container from "../Components/Container";
@@ -57,10 +57,10 @@ const Register = () => {
       await createUser(email, password);
       await updateUserProfile(name, photoURL);
 
-      // ২. ব্যাকএন্ডে ইউজার ডেটা পাঠানো
+      // ২. ব্যাকএন্ডে ইউজার ডেটা পাঠানো (লিংকে https:// যুক্ত করা হয়েছে)
       const newUser = { name, email, photoURL, role: "user", status: "active" };
       await axios.post(
-        "social-development-events-seven.vercel.app/api/users",
+        "https://social-development-events-seven.vercel.app/api/users",
         newUser
       );
 
@@ -79,7 +79,6 @@ const Register = () => {
       const result = await signInWithGoogle();
       const user = result.user;
 
-      // গুগল ইউজারকে ডাটাবেজে সেভ (Upsert লজিক ব্যাকএন্ডে থাকবে)
       const newUser = {
         name: user.displayName,
         email: user.email,
@@ -88,7 +87,7 @@ const Register = () => {
         status: "active",
       };
       await axios.post(
-        "social-development-events-seven.vercel.app/api/users",
+        "https://social-development-events-seven.vercel.app/api/users",
         newUser
       );
 
@@ -120,6 +119,19 @@ const Register = () => {
                 placeholder="Your Name"
                 className="mt-1 w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                 required
+              />
+            </div>
+
+            {/* ছবি ইনপুট ফিল্ড (নতুন যোগ করা হয়েছে) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Photo URL (Optional)
+              </label>
+              <input
+                type="text"
+                name="photo"
+                placeholder="https://example.com/photo.jpg"
+                className="mt-1 w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
               />
             </div>
 
