@@ -22,8 +22,8 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 const DashboardHome = () => {
-  // ১. স্টেট ম্যানেজমেন্ট
-  const [filterDays, setFilterDays] = useState(7); // ডিফল্ট গত ৭ দিন
+  // ১. স্টেট ম্যানেজমেন্ট (খালি অ্যারে দিয়ে ইনিশিয়ালাইজ করা হয়েছে যাতে এরর না আসে)
+  const [filterDays, setFilterDays] = useState(7);
   const [stats, setStats] = useState({
     totalEvents: 0,
     totalJoined: 0,
@@ -38,31 +38,37 @@ const DashboardHome = () => {
   const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
   const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#6366F1"];
 
-  // ২. ডাটা ফেচিং ফাংশন (ফিল্টার অনুযায়ী)
+  // ২. ডাটা ফেচিং ফাংশন
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
-        // ফিল্টার ডেস সহ এপিআই কল
+        // স্ট্যাটস ডাটা আনা
         const res = await axios.get(
           `${SERVER_BASE_URL}/api/admin-stats?days=${filterDays}`
         );
-        setStats(res.data);
+        // নিশ্চিত করা হচ্ছে যে ডাটা অবজেক্টে chartData এবং categoryData আছে
+        setStats({
+          ...res.data,
+          chartData: res.data.chartData || [],
+          categoryData: res.data.categoryData || [],
+        });
 
         // রিসেন্ট অ্যাক্টিভিটি আনা
         const joinsRes = await axios.get(`${SERVER_BASE_URL}/api/recent-joins`);
-        setRecentJoins(joinsRes.data);
+        setRecentJoins(joinsRes.data || []);
       } catch (err) {
         console.error("Dashboard Data Fetch Error:", err);
-        toast.error("ডাটা লোড করতে সমস্যা হয়েছে।");
+        toast.error("ডাটা লোড করতে সমস্যা হয়েছে।");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [filterDays]); // filterDays পরিবর্তন হলে অটো কল হবে
+  }, [filterDays]);
 
+  // লোডিং স্টেট থাকলে স্পিনার দেখানো
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -73,14 +79,14 @@ const DashboardHome = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 font-sans">
-      {/* ৩. হেডার এবং ফিল্টার সেকশন */}
+      {/* ৩. হেডার এবং ফিল্টার */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white uppercase tracking-tight">
             Admin Dashboard
           </h2>
           <p className="text-sm text-slate-500">
-            স্বাগতম! আপনার প্রজেক্টের বর্তমান অবস্থা নিচে দেখুন।
+            প্রজেক্টের রিয়েল-টাইম ওভারভিউ
           </p>
         </div>
 
@@ -99,7 +105,7 @@ const DashboardHome = () => {
         </div>
       </div>
 
-      {/* ৪. ডাইনামিক স্ট্যাটস কার্ডস */}
+      {/* ৪. কার্ডস */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           {
@@ -148,14 +154,12 @@ const DashboardHome = () => {
 
       {/* ৫. চার্ট সেকশন */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* আর্নিং এনালিটিক্স (Area Chart) */}
+        {/* Earnings Chart */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-          <h3 className="text-lg font-bold mb-6 text-slate-800 dark:text-white">
-            Earnings Trend
-          </h3>
+          <h3 className="text-lg font-bold mb-6">Earnings Trend</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData}>
+              <AreaChart data={stats.chartData || []}>
                 <defs>
                   <linearGradient
                     id="colorEarnings"
@@ -175,20 +179,10 @@ const DashboardHome = () => {
                 />
                 <XAxis
                   dataKey="name"
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  axisLine={false}
+                  tick={{ fill: "#94a3b8", fontSize: 10 }}
                 />
-                <YAxis
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  axisLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "12px",
-                    border: "none",
-                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
-                  }}
-                />
+                <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                <Tooltip />
                 <Area
                   type="monotone"
                   dataKey="amount"
@@ -201,22 +195,20 @@ const DashboardHome = () => {
           </div>
         </div>
 
-        {/* ক্যাটাগরি ডিস্ট্রিবিউশন (Pie Chart) */}
+        {/* Categories Pie Chart */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-          <h3 className="text-lg font-bold mb-6 text-slate-800 dark:text-white">
-            Event Categories
-          </h3>
+          <h3 className="text-lg font-bold mb-6">Event Categories</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={stats.categoryData}
+                  data={stats.categoryData || []}
                   innerRadius={70}
                   outerRadius={100}
                   paddingAngle={8}
                   dataKey="value"
                 >
-                  {stats.categoryData.map((entry, index) => (
+                  {stats.categoryData?.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={COLORS[index % COLORS.length]}
@@ -230,20 +222,15 @@ const DashboardHome = () => {
         </div>
       </div>
 
-      {/* ৬. রিসেন্ট পেমেন্ট টেবিল */}
+      {/* ৬. ট্রানজেকশন টেবিল */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-            Recent Transactions
-          </h3>
-          <button className="text-blue-500 text-sm font-bold hover:underline">
-            View All
-          </button>
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+          <h3 className="text-lg font-bold">Recent Transactions</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-slate-500 text-xs uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+              <tr className="text-slate-500 text-xs uppercase border-b border-slate-100 dark:border-slate-800">
                 <th className="px-6 py-4">Participant</th>
                 <th className="px-6 py-4">Event</th>
                 <th className="px-6 py-4">Amount</th>
@@ -251,12 +238,12 @@ const DashboardHome = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {recentJoins.map((join) => (
+              {recentJoins?.map((join) => (
                 <tr
                   key={join._id}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/40"
                 >
-                  <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200">
+                  <td className="px-6 py-4 font-semibold">
                     {join.userName || join.userEmail}
                   </td>
                   <td className="px-6 py-4 text-slate-500 text-sm">
@@ -276,7 +263,7 @@ const DashboardHome = () => {
           </table>
           {recentJoins.length === 0 && (
             <div className="p-10 text-center text-gray-400">
-              কোনো ডাটা পাওয়া যায়নি।
+              কোনো ডাটা পাওয়া যায়নি।
             </div>
           )}
         </div>
