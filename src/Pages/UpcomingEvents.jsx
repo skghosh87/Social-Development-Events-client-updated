@@ -11,9 +11,7 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
-const SERVER_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://social-development-events-seven.vercel.app";
+const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
 
 const UpcomingEvents = () => {
   const [events, setEvents] = useState([]);
