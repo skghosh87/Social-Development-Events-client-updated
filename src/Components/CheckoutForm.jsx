@@ -3,19 +3,22 @@ import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { FaCreditCard, FaLock, FaDollarSign } from "react-icons/fa";
+import { useAuth } from "../Hooks/useAuth"; // ইউজার ইনফো নেওয়ার জন্য
 
 const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
 
 const CheckoutForm = ({ onPaymentSuccess }) => {
   const stripe = useStripe();
   const elements = useElements();
-  const [amount, setAmount] = useState(5); // ডিফল্ট ৫ ডলার
+  const { user } = useAuth(); // ইউজারের নাম এবং ইমেইল পেতে
+  const [amount, setAmount] = useState(5);
   const [clientSecret, setClientSecret] = useState("");
   const [cardError, setCardError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // পেমেন্ট ইনটেন্ট তৈরি করা (যখনই অ্যামাউন্ট ৫ বা তার বেশি হবে)
+  // ১. পেমেন্ট ইনটেন্ট তৈরি করা (Debounced useEffect)
   useEffect(() => {
+    // শুধুমাত্র ৫ বা তার বেশি হলে ব্যাকএন্ডে রিকোয়েস্ট যাবে
     if (amount >= 5) {
       const delayDebounceFn = setTimeout(() => {
         axios
@@ -27,20 +30,18 @@ const CheckoutForm = ({ onPaymentSuccess }) => {
           })
           .catch((err) => {
             console.error("Error creating payment intent:", err);
+            toast.error("পেমেন্ট গেটওয়ে কানেক্ট করতে সমস্যা হচ্ছে।");
           });
-      }, 500); // ইউজার টাইপ করা শেষ করার জন্য ৫০০ms অপেক্ষা
+      }, 500);
 
       return () => clearTimeout(delayDebounceFn);
+    } else {
+      setClientSecret(""); // অ্যামাউন্ট ৫ এর নিচে নামলে সিক্রেট মুছে দাও
     }
   }, [amount]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
-    if (amount < 5) {
-      setCardError("নূন্যতম ৫ ডলার পেমেন্ট করতে হবে।");
-      return;
-    }
 
     if (!stripe || !elements || !clientSecret) return;
 
@@ -50,22 +51,15 @@ const CheckoutForm = ({ onPaymentSuccess }) => {
     setIsProcessing(true);
     setCardError("");
 
-    const { error, paymentMethod } = await stripe.createPaymentMethod({
-      type: "card",
-      card,
-    });
-
-    if (error) {
-      setCardError(error.message);
-      setIsProcessing(false);
-      return;
-    }
-
+    // ২. পেমেন্ট কনফার্ম করা
     const { paymentIntent, error: confirmError } =
       await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: card,
-          billing_details: { name: "Donor" },
+          billing_details: {
+            name: user?.displayName || "Anonymous Donor",
+            email: user?.email || "unknown@email.com",
+          },
         },
       });
 
@@ -75,6 +69,7 @@ const CheckoutForm = ({ onPaymentSuccess }) => {
     } else {
       if (paymentIntent.status === "succeeded") {
         toast.success(`$${amount} পেমেন্ট সফল হয়েছে!`);
+        // ৩. মেইন ফাংশনে ট্রানজেকশন আইডি এবং ফাইনাল অ্যামাউন্ট পাঠানো
         onPaymentSuccess(paymentIntent.id, amount);
         setIsProcessing(false);
       }
@@ -82,68 +77,81 @@ const CheckoutForm = ({ onPaymentSuccess }) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* অ্যামাউন্ট ইনপুট ফিল্ড */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            আপনি কত ডলার দিতে চান? (নূন্যতম $৫)
+    <div className="bg-white p-2 sm:p-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            সহযোগিতার পরিমাণ ($)
           </label>
-          <div className="relative">
+          <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaDollarSign className="text-gray-400" />
+              <FaDollarSign className="text-blue-500 group-focus-within:text-blue-600" />
             </div>
             <input
               type="number"
               min="5"
+              step="0.01" // সেন্ট পেমেন্টের জন্য ডেসিমাল সাপোর্ট
               value={amount}
-              onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-              className="pl-8 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
-              placeholder="অ্যামাউন্ট লিখুন"
+              onChange={(e) =>
+                setAmount(Math.max(0, parseFloat(e.target.value) || 0))
+              }
+              className="pl-9 w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-gray-800"
+              placeholder="অ্যামাউন্ট"
               required
             />
           </div>
           {amount > 0 && amount < 5 && (
-            <p className="text-red-500 text-xs mt-1">
-              দয়া করে ৫ বা তার বেশি লিখুন।
+            <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
+              ⚠️ নূন্যতম ৫ ডলার পেমেন্ট করতে হবে।
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-2 mb-2 text-gray-700 font-semibold">
-          <FaCreditCard className="text-blue-600" />
-          <span>কার্ডের তথ্য দিন</span>
-        </div>
-
-        <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
-          <CardElement
-            options={{
-              style: {
-                base: {
-                  fontSize: "16px",
-                  color: "#424770",
-                  "::placeholder": { color: "#aab7c4" },
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-gray-600 text-sm font-medium">
+            <FaCreditCard /> <span>কার্ডের তথ্য প্রদান করুন</span>
+          </div>
+          <div className="p-4 border-2 border-gray-100 rounded-xl bg-white shadow-inner focus-within:border-blue-300 transition-all">
+            <CardElement
+              options={{
+                style: {
+                  base: {
+                    fontSize: "16px",
+                    color: "#1a202c",
+                    "::placeholder": { color: "#a0aec0" },
+                  },
                 },
-                invalid: { color: "#9e2146" },
-              },
-            }}
-          />
+              }}
+            />
+          </div>
         </div>
 
         {cardError && (
-          <p className="text-red-500 text-sm font-medium">{cardError}</p>
+          <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+            {cardError}
+          </div>
         )}
 
         <button
           type="submit"
           disabled={!stripe || !clientSecret || isProcessing || amount < 5}
-          className={`w-full py-3 px-6 rounded-lg text-white font-bold transition duration-300 flex items-center justify-center gap-2 ${
+          className={`w-full py-4 px-6 rounded-xl text-white font-bold text-lg transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-3 ${
             isProcessing || !stripe || amount < 5
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700 shadow-lg"
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700 shadow-blue-200 shadow-xl"
           }`}
         >
-          {isProcessing ? "প্রসেসিং..." : `Pay $${amount} & Confirm`}
+          {isProcessing ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              প্রসেসিং...
+            </>
+          ) : (
+            <>
+              <FaLock className="text-sm" />
+              Pay ${amount} & Confirm
+            </>
+          )}
         </button>
       </form>
     </div>

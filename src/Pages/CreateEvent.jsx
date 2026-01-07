@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Container from "../Components/Container";
-
 import {
   FaCalendarPlus,
   FaRegCalendarAlt,
   FaEnvelope,
   FaUser,
   FaTimes,
+  FaDollarSign,
 } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import axios from "axios";
@@ -20,8 +20,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import CheckoutForm from "../Components/CheckoutForm";
 import { useAuth } from "../Hooks/useAuth";
 
-// আপনার Stripe Publishable Key এখানে দিন (Vite এর জন্য VITE_ prefix ব্যবহার করা হয়েছে)
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 const CreateEvent = () => {
   const { user, loading } = useAuth();
@@ -32,10 +31,10 @@ const CreateEvent = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [tempEventData, setTempEventData] = useState(null);
 
-  const ORGANIZER_FEE = 5; // অর্গানাইজারের জন্য ফিক্সড ফি $৫.০০
+  const MIN_FEE = 5; // নূন্যতম ৫ ডলার
   const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
 
-  // ১. ফর্ম সাবমিট হ্যান্ডলার (পেমেন্টের আগে ডাটা টেম্পোরারি সেভ করা)
+  // ১. ফর্ম সাবমিট হ্যান্ডলার
   const handleFormSubmit = (e) => {
     e.preventDefault();
 
@@ -57,16 +56,22 @@ const CreateEvent = () => {
       organizerEmail: user?.email,
       postedAt: new Date().toISOString(),
       participants: 0,
+      // অর্গানাইজারের কন্ট্রিবিউশন পরে পেমেন্ট সাকসেস হলে যোগ হবে
     };
 
-    setTempEventData(eventData); // ডাটা সেভ করে রাখা হলো
-    setShowPaymentModal(true); // পেমেন্ট মডাল ওপেন করা হলো
+    setTempEventData(eventData);
+    setShowPaymentModal(true);
   };
 
-  // ২. পেমেন্ট সফল হলে এই ফাংশনটি কল হবে (মডাল অটো বন্ধ হবে এখানে)
-  const handlePaymentSuccess = async (transactionId) => {
+  // ২. পেমেন্ট সফল হলে এই ফাংশনটি কল হবে
+  const handlePaymentSuccess = async (transactionId, paidAmount) => {
     try {
-      const finalEventData = { ...tempEventData, transactionId };
+      // ইভেন্ট ডাটার সাথে ট্রানজেকশন আইডি এবং অ্যামাউন্ট যোগ করা
+      const finalEventData = {
+        ...tempEventData,
+        transactionId,
+        organizerContribution: paidAmount,
+      };
 
       const response = await axios.post(
         `${SERVER_BASE_URL}/api/events`,
@@ -74,13 +79,10 @@ const CreateEvent = () => {
       );
 
       if (response.data.success) {
-        toast.success("🎉 পেমেন্ট সফল এবং ইভেন্ট পাবলিশ হয়েছে!");
-
-        // মডাল অটোমেটিক বন্ধ করা
+        toast.success(`🎉 $${paidAmount} পেমেন্ট সফল এবং ইভেন্ট পাবলিশ হয়েছে!`);
         setShowPaymentModal(false);
         setTempEventData(null);
 
-        // ২ সেকেন্ড পর ইভেন্ট লিস্টে পাঠিয়ে দেওয়া (ঐচ্ছিক)
         setTimeout(() => {
           navigate("/upcoming-events");
         }, 2000);
@@ -91,10 +93,9 @@ const CreateEvent = () => {
     }
   };
 
-  // লোডিং স্টেট
   if (loading) {
     return (
-      <div className="text-center py-20">
+      <div className="flex justify-center items-center h-screen">
         <span className="loading loading-spinner loading-lg text-blue-600"></span>
       </div>
     );
@@ -102,63 +103,73 @@ const CreateEvent = () => {
 
   return (
     <Container className="py-10">
-      <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-2xl border border-blue-200">
-        <h2 className="text-3xl font-bold text-center text-blue-700 mb-8 flex items-center justify-center gap-3">
-          <FaCalendarPlus className="text-blue-500" /> Create a New Social Event
+      <div className="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+        <h2 className="text-3xl font-bold text-center text-gray-800 mb-8 flex items-center justify-center gap-3">
+          <FaCalendarPlus className="text-blue-600" /> Create New Event
         </h2>
 
         <form onSubmit={handleFormSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Event Title
               </label>
               <input
                 type="text"
                 name="eventName"
-                placeholder="e.g., Park Cleanup"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500"
+                placeholder="e.g., Road Cleaning Drive"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Category
               </label>
               <select
                 name="category"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
                 required
               >
                 <option value="">Select Category</option>
-                <option value="Environment">Environment & Ecology</option>
-                <option value="Education">Education & Skill Building</option>
-                <option value="Health">Health & Wellness</option>
-                <option value="Community">Community Building</option>
-                <option value="Welfare">Social Welfare</option>
+                <option value="Environment">Environment</option>
+                <option value="Education">Education</option>
+                <option value="Health">Health</option>
+                <option value="Community">Community</option>
+                <option value="Welfare">Welfare</option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <input
-              type="url"
-              name="image"
-              placeholder="Image URL"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500"
-              required
-            />
-            <input
-              type="text"
-              name="location"
-              placeholder="Location/Address"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500"
-              required
-            />
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Image URL
+              </label>
+              <input
+                type="url"
+                name="image"
+                placeholder="https://image-link.com"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Location
+              </label>
+              <input
+                type="text"
+                name="location"
+                placeholder="Dhanmondi, Dhaka"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                required
+              />
+            </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
               <FaRegCalendarAlt className="text-blue-500" /> Event Date & Time
             </label>
             <DatePicker
@@ -167,65 +178,71 @@ const CreateEvent = () => {
               showTimeSelect
               dateFormat="Pp"
               minDate={new Date()}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
               required
             />
           </div>
 
-          <textarea
-            name="description"
-            rows="4"
-            placeholder="Event Description..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500"
-            required
-          ></textarea>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Description
+            </label>
+            <textarea
+              name="description"
+              rows="4"
+              placeholder="Tell us about the event mission..."
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+              required
+            ></textarea>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50 p-4 rounded-lg border border-blue-300">
-            <div className="flex items-center gap-2 text-sm text-gray-700">
-              <FaUser className="text-blue-600" /> Organizer:{" "}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <FaUser className="text-blue-500" /> Organizer:{" "}
               <strong>{user?.displayName}</strong>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-700">
-              <FaEnvelope className="text-blue-600" /> Email:{" "}
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <FaEnvelope className="text-blue-500" /> Email:{" "}
               <strong>{user?.email}</strong>
             </div>
           </div>
 
           <button
             type="submit"
-            className="w-full py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-300 shadow-lg"
+            className="w-full py-4 bg-gray-800 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2"
           >
-            Pay ${ORGANIZER_FEE} & Publish Event
+            <FaDollarSign /> Continue to Payment & Publish
           </button>
         </form>
       </div>
 
       {/* --- পেমেন্ট মডাল --- */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full relative shadow-2xl animate-in fade-in zoom-in duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full relative shadow-2xl">
             <button
               onClick={() => setShowPaymentModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition"
+              className="absolute top-5 right-5 text-gray-400 hover:text-red-500 transition"
             >
-              <FaTimes size={24} />
+              <FaTimes size={20} />
             </button>
 
-            <div className="text-center mb-6">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FaDollarSign size={30} />
+              </div>
               <h3 className="text-2xl font-bold text-gray-800">
-                অর্গানাইজার পেমেন্ট
+                অর্গানাইজার ফি
               </h3>
               <p className="text-gray-500 mt-2">
-                ইভেন্টটি পাবলিশ করতে <strong>${ORGANIZER_FEE}.00</strong>{" "}
-                পেমেন্ট নিশ্চিত করুন।
+                ইভেন্টটি লিস্ট করতে নূন্যতম <strong>${MIN_FEE}.00</strong>{" "}
+                পেমেন্ট করুন। আপনি চাইলে বেশি দিয়েও আমাদের সোশ্যাল ওয়ার্কে
+                সাপোর্ট করতে পারেন।
               </p>
             </div>
 
             <Elements stripe={stripePromise}>
-              <CheckoutForm
-                price={ORGANIZER_FEE}
-                onPaymentSuccess={handlePaymentSuccess}
-              />
+              <CheckoutForm onPaymentSuccess={handlePaymentSuccess} />
             </Elements>
           </div>
         </div>

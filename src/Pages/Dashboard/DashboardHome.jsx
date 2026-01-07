@@ -1,14 +1,12 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  AreaChart,
-  Area,
   PieChart,
   Pie,
   Cell,
@@ -17,74 +15,130 @@ import {
   FaCalendarCheck,
   FaUsers,
   FaLayerGroup,
-  FaArrowUp,
+  FaDollarSign,
+  FaFilter,
 } from "react-icons/fa";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const DashboardHome = () => {
-  // ডামি ডেটা
-  const statsData = [
-    { name: "Jan", events: 4, joined: 12 },
-    { name: "Feb", events: 7, joined: 18 },
-    { name: "Mar", events: 5, joined: 15 },
-    { name: "Apr", events: 10, joined: 25 },
-    { name: "May", events: 8, joined: 22 },
-  ];
+  // ১. স্টেট ম্যানেজমেন্ট
+  const [filterDays, setFilterDays] = useState(7); // ডিফল্ট গত ৭ দিন
+  const [stats, setStats] = useState({
+    totalEvents: 0,
+    totalJoined: 0,
+    totalEarnings: 0,
+    totalUsers: 0,
+    chartData: [],
+    categoryData: [],
+  });
+  const [recentJoins, setRecentJoins] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const categoryData = [
-    { name: "Social", value: 400 },
-    { name: "Education", value: 300 },
-    { name: "Charity", value: 300 },
-    { name: "Workshop", value: 200 },
-  ];
-
+  const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
   const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#6366F1"];
 
+  // ২. ডাটা ফেচিং ফাংশন (ফিল্টার অনুযায়ী)
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        // ফিল্টার ডেস সহ এপিআই কল
+        const res = await axios.get(
+          `${SERVER_BASE_URL}/api/admin-stats?days=${filterDays}`
+        );
+        setStats(res.data);
+
+        // রিসেন্ট অ্যাক্টিভিটি আনা
+        const joinsRes = await axios.get(`${SERVER_BASE_URL}/api/recent-joins`);
+        setRecentJoins(joinsRes.data);
+      } catch (err) {
+        console.error("Dashboard Data Fetch Error:", err);
+        toast.error("ডাটা লোড করতে সমস্যা হয়েছে।");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [filterDays]); // filterDays পরিবর্তন হলে অটো কল হবে
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <span className="loading loading-spinner loading-lg text-blue-600"></span>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* ১. ওভারভিউ কার্ডস (Enhanced with hover and dark mode) */}
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 font-sans">
+      {/* ৩. হেডার এবং ফিল্টার সেকশন */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+            Admin Dashboard
+          </h2>
+          <p className="text-sm text-slate-500">
+            স্বাগতম! আপনার প্রজেক্টের বর্তমান অবস্থা নিচে দেখুন।
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
+          <FaFilter className="text-blue-500 ml-2" />
+          <select
+            value={filterDays}
+            onChange={(e) => setFilterDays(Number(e.target.value))}
+            className="bg-transparent border-none outline-none text-sm font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
+          >
+            <option value={7}>Last 7 Days</option>
+            <option value={30}>Last 30 Days</option>
+            <option value={90}>Last 3 Months</option>
+            <option value={365}>Last Year</option>
+          </select>
+        </div>
+      </div>
+
+      {/* ৪. ডাইনামিক স্ট্যাটস কার্ডস */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           {
-            label: "Joined Events",
-            val: "12",
+            label: "Total Events",
+            val: stats.totalEvents,
             icon: <FaCalendarCheck />,
-            color: "bg-blue-500",
             text: "text-blue-500",
           },
           {
-            label: "Volunteers",
-            val: "85",
+            label: "Total Participants",
+            val: stats.totalJoined,
             icon: <FaUsers />,
-            color: "bg-emerald-500",
             text: "text-emerald-500",
           },
           {
-            label: "Categories",
-            val: "08",
-            icon: <FaLayerGroup />,
-            color: "bg-amber-500",
+            label: `Earnings (${filterDays}d)`,
+            val: `$${stats.totalEarnings}`,
+            icon: <FaDollarSign />,
             text: "text-amber-500",
           },
           {
-            label: "Engagement",
-            val: "+24%",
-            icon: <FaArrowUp />,
-            color: "bg-indigo-500",
+            label: "Total Users",
+            val: stats.totalUsers,
+            icon: <FaLayerGroup />,
             text: "text-indigo-500",
           },
         ].map((item, idx) => (
           <div
             key={idx}
-            className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex items-center gap-5"
+            className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all flex items-center gap-5"
           >
             <div className={`p-4 ${item.text} bg-opacity-10 rounded-2xl`}>
               {React.cloneElement(item.icon, { size: 24 })}
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 {item.label}
               </p>
-              <h3 className="text-2xl font-bold text-slate-800 dark:text-white">
+              <h3 className="text-2xl font-black text-slate-800 dark:text-white">
                 {item.val}
               </h3>
             </div>
@@ -92,18 +146,24 @@ const DashboardHome = () => {
         ))}
       </div>
 
-      {/* ২. চার্ট সেকশন */}
+      {/* ৫. চার্ট সেকশন */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* ইভেন্ট স্ট্যাটিসটিকস */}
+        {/* আর্নিং এনালিটিক্স (Area Chart) */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <h3 className="text-lg font-bold mb-6 text-slate-800 dark:text-white">
-            Monthly Participation
+            Earnings Trend
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={statsData}>
+              <AreaChart data={stats.chartData}>
                 <defs>
-                  <linearGradient id="colorEvents" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="colorEarnings"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                   </linearGradient>
@@ -111,43 +171,37 @@ const DashboardHome = () => {
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
-                  stroke="#94a3b8"
-                  strokeOpacity={0.2}
+                  strokeOpacity={0.1}
                 />
                 <XAxis
                   dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
                   tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  dy={10}
+                  axisLine={false}
                 />
                 <YAxis
-                  axisLine={false}
-                  tickLine={false}
                   tick={{ fill: "#94a3b8", fontSize: 12 }}
+                  axisLine={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#1e293b",
+                    borderRadius: "12px",
                     border: "none",
-                    borderRadius: "8px",
-                    color: "#f8fafc",
+                    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
                   }}
-                  itemStyle={{ color: "#3B82F6" }}
                 />
                 <Area
                   type="monotone"
-                  dataKey="joined"
+                  dataKey="amount"
                   stroke="#3B82F6"
                   strokeWidth={3}
-                  fill="url(#colorEvents)"
+                  fill="url(#colorEarnings)"
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* ক্যাটাগরি ডিস্ট্রিবিউশন */}
+        {/* ক্যাটাগরি ডিস্ট্রিবিউশন (Pie Chart) */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <h3 className="text-lg font-bold mb-6 text-slate-800 dark:text-white">
             Event Categories
@@ -156,19 +210,16 @@ const DashboardHome = () => {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
+                  data={stats.categoryData}
                   innerRadius={70}
                   outerRadius={100}
                   paddingAngle={8}
                   dataKey="value"
                 >
-                  {categoryData.map((entry, index) => (
+                  {stats.categoryData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={COLORS[index % COLORS.length]}
-                      stroke="none"
                     />
                   ))}
                 </Pie>
@@ -179,52 +230,55 @@ const DashboardHome = () => {
         </div>
       </div>
 
-      {/* ৩. রিসেন্ট অ্যাক্টিভিটি টেবিল */}
+      {/* ৬. রিসেন্ট পেমেন্ট টেবিল */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
           <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-            Recent Joined Events
+            Recent Transactions
           </h3>
-          <button className="text-blue-500 text-sm font-bold hover:text-blue-600 transition">
+          <button className="text-blue-500 text-sm font-bold hover:underline">
             View All
           </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-slate-500 dark:text-slate-400 text-xs uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
-                <th className="px-6 py-4 font-bold">Event Name</th>
-                <th className="px-6 py-4 font-bold">Date</th>
-                <th className="px-6 py-4 font-bold">Status</th>
-                <th className="px-6 py-4 font-bold">Action</th>
+              <tr className="text-slate-500 text-xs uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                <th className="px-6 py-4">Participant</th>
+                <th className="px-6 py-4">Event</th>
+                <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4">Transaction ID</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {[1, 2, 3].map((item) => (
+              {recentJoins.map((join) => (
                 <tr
-                  key={item}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group"
+                  key={join._id}
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
                 >
                   <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200">
-                    Winter Cloth Distribution
+                    {join.userName || join.userEmail}
                   </td>
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">
-                    Dec 15, 2025
+                  <td className="px-6 py-4 text-slate-500 text-sm">
+                    {join.eventName}
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase rounded-lg tracking-wider">
-                      Upcoming
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold">
+                      ${join.amount}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <button className="text-blue-500 group-hover:underline text-sm font-bold">
-                      Details
-                    </button>
+                  <td className="px-6 py-4 font-mono text-xs text-slate-400">
+                    {join.transactionId}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {recentJoins.length === 0 && (
+            <div className="p-10 text-center text-gray-400">
+              কোনো ডাটা পাওয়া যায়নি।
+            </div>
+          )}
         </div>
       </div>
     </div>
