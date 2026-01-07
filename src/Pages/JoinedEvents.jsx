@@ -15,9 +15,7 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "../Hooks/useAuth";
 
-const SERVER_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://social-development-events-seven.vercel.app";
+const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
 
 const JoinedEvents = () => {
   const { user, loading: authLoading } = useAuth();

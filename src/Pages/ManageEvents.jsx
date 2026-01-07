@@ -9,9 +9,7 @@ import Swal from "sweetalert2";
 import UpdateEventModal from "../Components/UpdateEventModal";
 import { useAuth } from "../Hooks/useAuth";
 
-const SERVER_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://social-development-events-seven.vercel.app";
+const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
 
 const ManageEvents = () => {
   const { user, loading } = useAuth();

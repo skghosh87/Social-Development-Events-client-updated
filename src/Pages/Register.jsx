@@ -18,6 +18,7 @@ const Register = () => {
     setLoading,
     loading,
   } = useAuth();
+  const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
   const [show, setShow] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const navigate = useNavigate();
@@ -60,10 +61,7 @@ const Register = () => {
 
       // ২. ব্যাকএন্ডে ইউজার ডেটা পাঠানো (https:// সহ)
       const newUser = { name, email, photoURL, role: "user", status: "active" };
-      await axios.post(
-        "https://social-development-events-seven.vercel.app/api/users",
-        newUser
-      );
+      await axios.post(`${SERVER_BASE_URL}/api/users`, newUser);
 
       // ৩. ফায়ারবেস অটো-লগইন ক্লিয়ার করা (ঐচ্ছিক কিন্তু ভালো প্র্যাকটিস)
       await logOut();
@@ -92,10 +90,7 @@ const Register = () => {
       };
 
       // ব্যাকএন্ডে সেভ করা
-      await axios.post(
-        "https://social-development-events-seven.vercel.app/api/users",
-        newUser
-      );
+      await axios.post(`${SERVER_BASE_URL}/api/users`, newUser);
 
       // গুগল সাইন-আপের পর সেশন ক্লিয়ার করে লগইন পেজে পাঠানো
       await logOut();
