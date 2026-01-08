@@ -2,15 +2,7 @@ import React, { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Container from "../Components/Container";
-import {
-  FaCalendarPlus,
-  FaRegCalendarAlt,
-  FaTimes,
-  FaDollarSign,
-  FaMapMarkerAlt,
-  FaImage,
-  FaLayerGroup,
-} from "react-icons/fa";
+import { FaCalendarPlus, FaTimes, FaDollarSign } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -21,12 +13,13 @@ import { loadStripe } from "@stripe/stripe-js";
 import CheckoutForm from "../Components/CheckoutForm";
 import { useAuth } from "../Hooks/useAuth";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+// আপনার .env ফাইলের নামের সাথে মিল রেখে সংশোধন করা হয়েছে
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const CreateEvent = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [eventDate, setEventDate] = useState(new Date());
+  const [eventDate, setEventDate] = useState(null); // শুরুতে null রাখা ভালো
 
   // পেমেন্ট ও মডাল স্টেট
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -66,7 +59,7 @@ const CreateEvent = () => {
     if (!tempEventData) return;
 
     const loadingToast = toast.loading(
-      "ইভেন্ট পাবলিশ হচ্ছে, দয়া করে অপেক্ষা করুন..."
+      "ইভেন্ট পাবলিশ হচ্ছে, দয়া করে অপেক্ষা করুন..."
     );
 
     try {
@@ -137,7 +130,8 @@ const CreateEvent = () => {
               <input
                 type="text"
                 name="eventName"
-                className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none"
+                placeholder="যেমন: রক্তদান কর্মসূচি ২০২৬"
+                className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                 required
               />
             </div>
@@ -147,7 +141,7 @@ const CreateEvent = () => {
               </label>
               <select
                 name="category"
-                className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none"
+                className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                 required
               >
                 <option value="">Select Category</option>
@@ -168,7 +162,8 @@ const CreateEvent = () => {
               <input
                 type="url"
                 name="image"
-                className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none"
+                placeholder="https://example.com/image.jpg"
+                className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                 required
               />
             </div>
@@ -179,7 +174,8 @@ const CreateEvent = () => {
               <input
                 type="text"
                 name="location"
-                className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none"
+                placeholder="যেমন: ঢাকা, বাংলাদেশ"
+                className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                 required
               />
             </div>
@@ -193,8 +189,9 @@ const CreateEvent = () => {
               selected={eventDate}
               onChange={(date) => setEventDate(date)}
               showTimeSelect
+              placeholderText="তারিখ ও সময় নির্বাচন করুন"
               dateFormat="Pp"
-              className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none"
+              className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all"
               required
             />
           </div>
@@ -206,14 +203,15 @@ const CreateEvent = () => {
             <textarea
               name="description"
               rows="4"
-              className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none"
+              placeholder="ইভেন্টের উদ্দেশ্য এবং বিস্তারিত তথ্য এখানে লিখুন..."
+              className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-400 transition-all"
               required
             ></textarea>
           </div>
 
           <button
             type="submit"
-            className="w-full py-5 bg-blue-600 text-white font-bold rounded-2xl shadow-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+            className="w-full py-5 bg-blue-600 text-white font-bold rounded-2xl shadow-xl hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <FaDollarSign /> Continue to Payment & Publish
           </button>
@@ -221,7 +219,7 @@ const CreateEvent = () => {
       </div>
 
       {/* --- পেমেন্ট মডাল --- */}
-      {showPaymentModal && (
+      {showPaymentModal && tempEventData && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
           <div className="bg-white rounded-[2rem] p-8 max-w-md w-full relative shadow-2xl animate-in zoom-in-95 duration-300">
             <button
@@ -244,18 +242,14 @@ const CreateEvent = () => {
               </p>
             </div>
 
-            {/* Elements Wrapper - Key ফিক্স করা হয়েছে */}
-            <Elements
-              key={tempEventData?.eventName || "stripe-elements"}
-              stripe={stripePromise}
-            >
+            <Elements key={tempEventData.eventName} stripe={stripePromise}>
               <CheckoutForm onPaymentSuccess={handlePaymentSuccess} />
             </Elements>
           </div>
         </div>
       )}
 
-      <ToastContainer position="Top-right" />
+      <ToastContainer position="top-right" />
     </Container>
   );
 };
