@@ -8,7 +8,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import CheckoutForm from "../Components/CheckoutForm";
 
 // স্ট্রাইপ পাবলিশেবল কি লোড করা
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const EventDetails = () => {
   const { id } = useParams();
