@@ -1,26 +1,35 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../Hooks/useAuth"; // আপনার useAuth হুকের পাথ অনুযায়ী দিন
+import { useAuth } from "../Hooks/useAuth";
+import { FaShieldAlt } from "react-icons/fa";
 
 const AdminRoute = ({ children }) => {
   const { user, role, loading } = useAuth();
   const location = useLocation();
 
-  // ১. ডেটা লোড হওয়ার সময় একটি সুন্দর স্পিনার বা স্কেলিটন দেখাবে
-  if (loading) {
+  if (loading || (user && role === null)) {
+    console.log("Auth Status:", {
+      loading,
+      userEmail: user?.email,
+      userRole: role,
+    });
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <span className="loading loading-spinner loading-lg text-secondary"></span>
+      <div className="flex flex-col justify-center items-center min-h-screen bg-slate-50 dark:bg-slate-950 space-y-4">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-secondary/20 border-t-secondary rounded-full animate-spin"></div>
+          <FaShieldAlt className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-secondary animate-pulse" />
+        </div>
+        <p className="font-black text-slate-500 uppercase tracking-widest text-[10px]">
+          Verifying Admin Access...
+        </p>
       </div>
     );
   }
 
-  // ২. যদি ইউজার লগইন থাকে এবং তার রোল 'admin' হয়, তবে তাকে পেজটি দেখতে দাও
   if (user && role === "admin") {
     return children;
   }
 
-  // ৩. যদি অ্যাডমিন না হয়, তবে তাকে ড্যাশবোর্ডে পাঠিয়ে দাও (অথবা লগইন পেজে)
   return <Navigate to="/dashboard" state={{ from: location }} replace />;
 };
 

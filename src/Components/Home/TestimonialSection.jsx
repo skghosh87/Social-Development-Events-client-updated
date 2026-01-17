@@ -1,12 +1,12 @@
 import React from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Pagination } from "swiper/modules"; // Pagination মডিউল নিশ্চিত করা হয়েছে
+import { Autoplay, Pagination } from "swiper/modules";
 import { FaQuoteLeft, FaStar } from "react-icons/fa";
 import Container from "../Container";
 
 // Swiper Styles
 import "swiper/css";
-import "swiper/css/pagination"; // পেজিনেশন স্টাইল অবশ্যই ইমপোর্ট করতে হবে
+import "swiper/css/pagination";
 
 const testimonialData = [
   {
@@ -69,13 +69,12 @@ const TestimonialSection = () => {
             autoplay={{ delay: 4000, disableOnInteraction: false }}
             pagination={{
               clickable: true,
-              dynamicBullets: true, // ডটগুলো দেখতে আরও আধুনিক লাগবে
+              dynamicBullets: true,
             }}
             breakpoints={{
               768: { slidesPerView: 2 },
               1024: { slidesPerView: 3 },
             }}
-            // !pb-14 ব্যবহার করা হয়েছে যাতে ডটগুলো কার্ডের গায়ে লেগে না যায়
             className="mySwiper !pb-14"
           >
             {testimonialData.map((item) => (
@@ -135,7 +134,6 @@ const TestimonialSection = () => {
           </Swiper>
         </div>
 
-        {/* পেজিনেশন কালার কাস্টমাইজ করার জন্য নিচের CSS টুকু আপনার index.css এ রাখতে পারেন */}
         <style jsx="true">{`
           .swiper-pagination-bullet-active {
             background: var(--color-secondary, #3b82f6) !important;

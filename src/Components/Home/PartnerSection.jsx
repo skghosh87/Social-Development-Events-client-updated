@@ -15,7 +15,6 @@ const PartnerSection = () => {
   return (
     <section className="py-24 bg-base-100 dark:bg-slate-950 transition-colors duration-300 overflow-hidden">
       <Container>
-        {/* ১. সেকশন হেডার (আগের ডিজাইনের সাথে মিল রেখে) */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white leading-tight">
             Our Trusted <span className="text-secondary">Partners</span>
@@ -27,11 +26,10 @@ const PartnerSection = () => {
           </p>
         </div>
 
-        {/* ২. লোগো ক্যারোসেল (Marquee Effect) */}
         <div className="relative py-10 bg-white/5 dark:bg-slate-900/20 rounded-[--radius-card] border border-slate-100 dark:border-slate-800/50 backdrop-blur-sm">
           <Marquee
             gradient={true}
-            gradientColor={undefined} // এটি আপনার ডার্ক মোডের সাথে অটো অ্যাডজাস্ট করবে
+            gradientColor={undefined}
             className="dark:gradient-dark"
             speed={50}
             pauseOnHover={true}

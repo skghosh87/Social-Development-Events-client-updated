@@ -1,21 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { toast } from "react-toastify";
-import Container from "../Components/Container";
-
-import { FaEdit, FaSpinner, FaSave } from "react-icons/fa";
+import {
+  FaEdit,
+  FaSpinner,
+  FaSave,
+  FaArrowLeft,
+  FaImage,
+} from "react-icons/fa";
 import { useAuth } from "../Hooks/useAuth";
-
-const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
-
+import useAxiosSecure from "../Hooks/useAxiosSecure";
 const EditEvent = () => {
   const { id } = useParams();
-
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const axiosSecure = useAxiosSecure();
 
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [eventData, setEventData] = useState({
     eventName: "",
     category: "",
@@ -27,9 +29,7 @@ const EditEvent = () => {
 
   useEffect(() => {
     if (authLoading) return;
-
-    if (!user?.email) {
-      toast.warn("অনুগ্রহ করে লগইন করুন।");
+    if (!user) {
       navigate("/login");
       return;
     }
@@ -37,252 +37,218 @@ const EditEvent = () => {
     const fetchEvent = async () => {
       try {
         setLoading(true);
-
-        const response = await axios.get(`${SERVER_BASE_URL}/api/events/${id}`);
-
-        const fetchedEvent = response.data.event;
+        const response = await axiosSecure.get(`/api/events/${id}`);
+        const ev = response.data.event;
 
         setEventData({
-          eventName: fetchedEvent.eventName || "",
-          category: fetchedEvent.category || "",
-
-          eventDate:
-            new Date(fetchedEvent.eventDate).toISOString().slice(0, 16) || "",
-          location: fetchedEvent.location || "",
-          description: fetchedEvent.description || "",
-          image: fetchedEvent.image || "",
+          eventName: ev.eventName || "",
+          category: ev.category || "",
+          eventDate: ev.eventDate
+            ? new Date(ev.eventDate).toISOString().slice(0, 16)
+            : "",
+          location: ev.location || "",
+          description: ev.description || "",
+          image: ev.image || "",
         });
       } catch (error) {
-        toast.error("ইভেন্টের বিবরণ লোড করতে সমস্যা হয়েছে।");
-        console.error("Error fetching event for edit:", error);
+        toast.error("ইভেন্ট ডেটা লোড করতে ব্যর্থ!");
+        navigate("/dashboard/manage-events");
       } finally {
         setLoading(false);
       }
     };
 
     fetchEvent();
-  }, [id, user, authLoading, navigate]);
+  }, [id, user, authLoading, navigate, axiosSecure]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEventData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    setEventData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (authLoading || loading) return;
-
-    setLoading(true);
-    const updatedData = {
-      ...eventData,
-
-      organizerEmail: user.email,
-      updatedAt: new Date().toISOString(),
-    };
+    setIsUpdating(true);
 
     try {
-      const response = await axios.put(
-        `${SERVER_BASE_URL}/api/events/${id}`,
-        updatedData
-      );
+      const response = await axiosSecure.patch(`/api/events/${id}`, {
+        ...eventData,
+        updatedAt: new Date().toISOString(),
+      });
 
-      if (response.data.success) {
+      if (response.data.modifiedCount > 0 || response.data.matchedCount > 0) {
         toast.success("ইভেন্টটি সফলভাবে আপডেট করা হয়েছে!");
-
-        navigate("/manage-events");
+        navigate("/dashboard/manage-events");
       } else {
-        toast.error(response.data.message || "ইভেন্ট আপডেট করতে ব্যর্থ।");
+        toast.info("ডেটাতে কোনো পরিবর্তন করা হয়নি।");
       }
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || "সার্ভার এরর বা নেটওয়ার্ক সমস্যা।";
-      toast.error(errorMessage);
+      toast.error(error.response?.data?.message || "আপডেট ব্যর্থ হয়েছে!");
     } finally {
-      setLoading(false);
+      setIsUpdating(false);
     }
   };
 
   if (authLoading || loading) {
     return (
-      <Container className="py-20 text-center">
-        <FaSpinner className="text-5xl text-blue-500 animate-spin mx-auto" />
-        <p className="mt-4 text-gray-600">
-          {authLoading ? "প্রমাণীকরণ লোড হচ্ছে..." : "ইভেন্ট ডেটা লোড হচ্ছে..."}
+      <div className="flex flex-col justify-center items-center min-h-[60vh] space-y-4">
+        <FaSpinner className="text-5xl text-secondary animate-spin" />
+        <p className="font-black text-slate-500 uppercase tracking-widest text-xs">
+          Loading Event Data...
         </p>
-      </Container>
-    );
-  }
-
-  if (!user) {
-    return (
-      <Container className="py-20 text-center">
-        <div className="p-10 bg-red-50 border border-red-300 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold text-red-700 mb-4">
-            অ্যাক্সেস অনুমোদিত নয়
-          </h2>
-          <p className="text-gray-600">
-            এই ইভেন্টটি আপডেট করার জন্য আপনাকে অবশ্যই লগইন করতে হবে।
-          </p>
-        </div>
-      </Container>
+      </div>
     );
   }
 
   return (
-    <Container className="py-10">
-      <div className="max-w-3xl mx-auto bg-white p-8 shadow-2xl rounded-xl border border-blue-200">
-        <h1 className="text-3xl font-bold text-center text-blue-700 mb-6 flex items-center justify-center gap-2">
-          <FaEdit className="text-blue-500" /> ইভেন্ট আপডেট করুন
-        </h1>
+    <div className="max-w-4xl mx-auto py-6 animate-fadeIn">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8 px-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-3 bg-white dark:bg-slate-900 shadow-sm rounded-2xl text-slate-500 hover:text-secondary transition-all"
+        >
+          <FaArrowLeft size={20} />
+        </button>
+        <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-3">
+          <FaEdit className="text-secondary" /> Edit Event
+        </h2>
+        <div className="w-10"></div> {/* Spacer */}
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Event Name */}
-          <div>
-            <label
-              htmlFor="eventName"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              ইভেন্টের নাম
-            </label>
-            <input
-              type="text"
-              name="eventName"
-              id="eventName"
-              value={eventData.eventName}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition"
-            />
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-slate-100 dark:border-slate-800">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Preview Section */}
+          <div className="relative h-48 w-full rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700">
+            {eventData.image ? (
+              <img
+                src={eventData.image}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                <FaImage size={40} className="mb-2" />
+                <span className="text-xs font-bold uppercase">
+                  No Image Preview
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Category & Location */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Event Name */}
+            <div className="md:col-span-2">
+              <label className="text-[10px] font-black uppercase tracking-[2px] text-slate-500 mb-2 block ml-2">
+                Event Title
+              </label>
+              <input
+                type="text"
+                name="eventName"
+                value={eventData.eventName}
+                onChange={handleChange}
+                required
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
+              />
+            </div>
+
             {/* Category */}
             <div>
-              <label
-                htmlFor="category"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                ক্যাটাগরি
+              <label className="text-[10px] font-black uppercase tracking-[2px] text-slate-500 mb-2 block ml-2">
+                Category
               </label>
               <select
                 name="category"
-                id="category"
                 value={eventData.category}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition appearance-none"
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
               >
-                <option value="">একটি ক্যাটাগরি নির্বাচন করুন</option>
+                <option value="Welfare">Social Welfare</option>
                 <option value="Environment">Environment</option>
                 <option value="Education">Education</option>
-                <option value="Health">Health</option>
-                <option value="Community">Community</option>
+                <option value="Health">Healthcare</option>
               </select>
             </div>
+
             {/* Location */}
             <div>
-              <label
-                htmlFor="location"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                স্থান (Location)
+              <label className="text-[10px] font-black uppercase tracking-[2px] text-slate-500 mb-2 block ml-2">
+                Location
               </label>
               <input
                 type="text"
                 name="location"
-                id="location"
                 value={eventData.location}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition"
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
               />
             </div>
-          </div>
 
-          {/* Date and Time */}
-          <div>
-            <label
-              htmlFor="eventDate"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              তারিখ ও সময়
-            </label>
-            <input
-              type="datetime-local"
-              name="eventDate"
-              id="eventDate"
-              value={eventData.eventDate}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition"
-            />
-          </div>
+            {/* Date */}
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-[2px] text-slate-500 mb-2 block ml-2">
+                Event Date & Time
+              </label>
+              <input
+                type="datetime-local"
+                name="eventDate"
+                value={eventData.eventDate}
+                onChange={handleChange}
+                required
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
+              />
+            </div>
 
-          {/* Image URL */}
-          <div>
-            <label
-              htmlFor="image"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              ইমেজ URL
-            </label>
-            <input
-              type="url"
-              name="image"
-              id="image"
-              value={eventData.image}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition"
-            />
-          </div>
+            {/* Image URL */}
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-[2px] text-slate-500 mb-2 block ml-2">
+                Image URL
+              </label>
+              <input
+                type="url"
+                name="image"
+                value={eventData.image}
+                onChange={handleChange}
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
+                placeholder="https://..."
+              />
+            </div>
 
-          {/* Description */}
-          <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              বিবরণ (Description)
-            </label>
-            <textarea
-              name="description"
-              id="description"
-              rows="4"
-              value={eventData.description}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition"
-            ></textarea>
+            {/* Description */}
+            <div className="md:col-span-2">
+              <label className="text-[10px] font-black uppercase tracking-[2px] text-slate-500 mb-2 block ml-2">
+                Full Description
+              </label>
+              <textarea
+                name="description"
+                rows="4"
+                value={eventData.description}
+                onChange={handleChange}
+                required
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
+              ></textarea>
+            </div>
           </div>
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading}
-            className={`w-full py-3 px-4 rounded-lg text-white font-bold text-lg transition duration-300 flex items-center justify-center gap-2 ${
-              loading
-                ? "bg-gray-400 cursor-wait"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            disabled={isUpdating}
+            className="w-full bg-secondary hover:bg-blue-700 text-white font-black py-5 rounded-[2rem] transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3 uppercase tracking-widest"
           >
-            {loading ? (
-              <>
-                <FaSpinner className="animate-spin" /> আপডেট করা হচ্ছে...
-              </>
+            {isUpdating ? (
+              <FaSpinner className="animate-spin text-xl" />
             ) : (
               <>
-                <FaSave /> ইভেন্ট আপডেট করুন
+                <FaSave /> Update Event
               </>
             )}
           </button>
         </form>
       </div>
-    </Container>
+    </div>
   );
 };
 

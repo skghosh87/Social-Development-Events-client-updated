@@ -14,7 +14,7 @@ import { useAuth } from "../Hooks/useAuth";
 const Login = () => {
   const [show, setShow] = useState(false);
   const emailRef = useRef(null);
-  const passwordRef = useRef(null); // পাসওয়ার্ড ফিল্ডের জন্য নতুন রিফ
+  const passwordRef = useRef(null);
   const { signIn, signInWithGoogle, resetPassword, setLoading, user, loading } =
     useAuth();
 

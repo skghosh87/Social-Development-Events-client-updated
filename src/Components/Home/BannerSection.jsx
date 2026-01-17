@@ -79,7 +79,6 @@ const BannerSection = () => {
                     {slide.slogan}
                   </p>
 
-                  {/* Updated Button using your btn-pro class */}
                   <div className="pt-4">
                     <Link to="/upcoming-events">
                       <button className="btn-pro px-10 py-4 text-lg flex items-center gap-3 mx-auto group/btn cursor-pointer rounded-lg">

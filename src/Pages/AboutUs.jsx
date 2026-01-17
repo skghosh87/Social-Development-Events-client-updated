@@ -1,7 +1,6 @@
 import React from "react";
 import { FaUsers, FaHandsHelping, FaBullseye, FaGlobe } from "react-icons/fa";
-import Container from "../Components/Container"; // আপনার কন্টেইনার পাথ চেক করুন
-
+import Container from "../Components/Container";
 const AboutUs = () => {
   const stats = [
     {
@@ -48,7 +47,6 @@ const AboutUs = () => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
       </section>
 
-      {/* Stats Section (Requirement 2: Statistics) */}
       <section className="py-16">
         <Container>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -84,7 +82,6 @@ const AboutUs = () => {
               <button className="btn-pro">Join Our Mission</button>
             </div>
             <div className="card-pro p-2">
-              {/* এখানে একটি রিয়েল ইমেজ ব্যবহার করবেন */}
               <img
                 src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
                 alt="Our Team"

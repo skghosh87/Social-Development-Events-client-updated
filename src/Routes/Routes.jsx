@@ -6,7 +6,6 @@ import HomePage from "../Pages/HomePage";
 import UpcomingEvents from "../Pages/UpcomingEvents";
 import Register from "../Pages/Register";
 import PrivateRoute from "../PrivateRoute/PrivateRoute";
-// AdminRoute ইমপোর্ট করুন (এটি তৈরি করে নিতে হবে)
 import AdminRoute from "../PrivateRoute/AdminRoute";
 import Login from "../Pages/Login";
 import EventDetails from "../Pages/EventDetails";
@@ -19,12 +18,12 @@ import JoinedEvents from "../Pages/JoinedEvents";
 import EditEvent from "../Pages/EditEvent";
 import ProfileUpdate from "../Components/ProfileUpdate";
 
-// Admin Specific Pages (নতুন যোগ করা হয়েছে)
 import AllUsers from "../Pages/Dashboard/Admin/AllUsers";
-import AllEvents from "../Pages/Dashboard/Admin/AllEvents";
+import AllEvents from "../Pages/Dashboard/Admin/AllEvent";
 
 import AboutUs from "../Pages/AboutUs";
 import ContactUs from "../Pages/ContactUs";
+import AllDonations from "../Pages/Dashboard/Admin/AllDonations";
 
 export const router = createBrowserRouter([
   {
@@ -78,7 +77,7 @@ export const router = createBrowserRouter([
 
       // --- Strict Admin Only Routes (Requirement 7 & Role Logic) ---
       {
-        path: "all-users",
+        path: "manage-users",
         element: (
           <AdminRoute>
             <AllUsers />
@@ -90,6 +89,14 @@ export const router = createBrowserRouter([
         element: (
           <AdminRoute>
             <AllEvents />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "all-donations",
+        element: (
+          <AdminRoute>
+            <AllDonations />
           </AdminRoute>
         ),
       },

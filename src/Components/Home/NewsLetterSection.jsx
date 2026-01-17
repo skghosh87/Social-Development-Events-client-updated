@@ -5,7 +5,6 @@ import { FaPaperPlane, FaShieldAlt } from "react-icons/fa";
 const NewsLetterSection = () => {
   const handleSubscribe = (e) => {
     e.preventDefault();
-    // সাবস্ক্রিপশন লজিক
   };
 
   return (
@@ -13,11 +12,9 @@ const NewsLetterSection = () => {
       <Container>
         {/* মেইন কার্ড */}
         <div className="relative overflow-hidden bg-primary dark:bg-slate-900 rounded-[--radius-card] shadow-2xl px-6 py-16 md:px-16">
-          {/* হালকা ডেকোরেটিভ গ্রেডিয়েন্ট */}
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.05),transparent)] pointer-events-none"></div>
 
           <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center text-center space-y-8">
-            {/* ১. শিরোনাম ও বর্ণনা - আরও স্পষ্ট করা হয়েছে */}
             <div className="space-y-4">
               <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight tracking-tight">
                 Stay Updated on{" "}
@@ -29,7 +26,6 @@ const NewsLetterSection = () => {
               </p>
             </div>
 
-            {/* ২. ইনলাইন ফর্ম ডিজাইন - বাটনটি এখন ইনপুট ফিল্ডের শেষে */}
             <form onSubmit={handleSubscribe} className="w-full max-w-2xl">
               <div className="relative flex items-center bg-white dark:bg-slate-800 p-1.5 rounded-2xl shadow-inner focus-within:ring-2 focus-within:ring-secondary/50 transition-all duration-300">
                 <div className="flex items-center pl-4 flex-grow">
@@ -42,7 +38,6 @@ const NewsLetterSection = () => {
                   />
                 </div>
 
-                {/* সাবস্ক্রাইব বাটন - ফিল্ডের একদম শেষে */}
                 <button
                   type="submit"
                   className="bg-secondary hover:bg-blue-600 text-white font-bold py-3 px-6 md:px-10 rounded-xl transition-all duration-300 active:scale-95 shadow-lg whitespace-nowrap cursor-pointer"

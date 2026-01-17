@@ -8,6 +8,7 @@ import {
   FaSearch,
   FaFilter,
   FaSpinner,
+  FaArrowRight,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
@@ -29,9 +30,14 @@ const UpcomingEvents = () => {
 
     try {
       const response = await axios.get(URL);
-      setEvents(response.data.events || []);
+      if (Array.isArray(response.data)) {
+        setEvents(response.data);
+      } else {
+        setEvents([]);
+      }
     } catch (error) {
       console.error("Error fetching upcoming events:", error);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -40,128 +46,153 @@ const UpcomingEvents = () => {
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchUpcomingEvents();
-    }, 500); // সার্চে পারফরম্যান্স বাড়ানোর জন্য টাইমার
+    }, 500);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, filterCategory]);
 
   return (
-    <div className="py-20 bg-base-100 dark:bg-slate-950 transition-colors duration-300 min-h-screen">
+    <div className="py-16 bg-slate-50 dark:bg-slate-950 min-h-screen transition-colors duration-500">
       <Container>
         {/* সেকশন হেডার */}
-        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <h1 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white leading-tight">
-            Upcoming Social <span className="text-secondary">Events</span>
+        <div className="text-center max-w-3xl mx-auto mb-16 animate-fadeIn">
+          <span className="text-secondary font-black uppercase tracking-[0.3em] text-[10px] bg-secondary/10 px-4 py-2 rounded-full mb-4 inline-block">
+            Discover Opportunities
+          </span>
+          <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">
+            Upcoming <span className="text-secondary">Events</span>
           </h1>
-          <div className="h-1.5 w-20 bg-secondary mx-auto rounded-full"></div>
-          <p className="text-slate-500 dark:text-slate-400 text-lg font-medium pt-2">
+          <p className="text-slate-500 dark:text-slate-400 text-lg font-medium mt-4">
             আজই একটি ইভেন্টে যোগ দিন এবং আপনার কমিউনিটিতে ইতিবাচক পরিবর্তনের অংশ
             হোন।
           </p>
         </div>
 
-        {/* সার্চ এবং ফিল্টার বার */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 p-6 card-pro border border-slate-100 dark:border-slate-800/50">
-          <div className="md:col-span-2 relative">
-            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        {/* সার্চ এবং ফিল্টার বার (Modern Glassy Look) */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-16 p-2 bg-white dark:bg-slate-900 rounded-[2rem] shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800">
+          <div className="md:col-span-3 relative">
+            <FaSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by event name..."
-              className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-secondary/50 outline-none dark:text-white transition-all"
+              placeholder="Search events by name or keywords..."
+              className="w-full pl-14 pr-6 py-5 rounded-[1.5rem] bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-secondary/30 outline-none dark:text-white font-bold transition-all text-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <div className="relative">
-            <FaFilter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <FaFilter className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" />
             <select
-              className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-secondary/50 outline-none dark:text-white appearance-none transition-all cursor-pointer"
+              className="w-full pl-14 pr-6 py-5 rounded-[1.5rem] bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-secondary/30 outline-none dark:text-white font-bold appearance-none cursor-pointer text-sm"
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
             >
               <option value="">All Categories</option>
+              <option value="">Select Category</option>
+              <option value="Welfare">Social Welfare</option>
               <option value="Environment">Environment</option>
               <option value="Education">Education</option>
-              <option value="Health">Health</option>
-              <option value="Community">Community</option>
+              <option value="Health">Healthcare</option>
             </select>
           </div>
         </div>
 
         {/* কন্টেন্ট লোডিং স্টেট */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <FaSpinner className="text-5xl text-secondary animate-spin" />
-            <p className="mt-4 text-slate-500 font-bold tracking-widest uppercase text-sm">
-              Loading Events...
+          <div className="flex flex-col items-center justify-center py-32">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-secondary/20 border-t-secondary rounded-full animate-spin"></div>
+            </div>
+            <p className="mt-6 text-slate-400 font-black tracking-widest uppercase text-[10px]">
+              Syncing Events...
             </p>
           </div>
         ) : events.length === 0 ? (
-          <div className="text-center py-20 card-pro border-dashed border-2">
-            <FaCalendarAlt className="text-6xl text-slate-300 dark:text-slate-800 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-slate-700 dark:text-slate-300">
-              No Event Found!
+          <div className="text-center py-24 bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-800">
+            <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FaCalendarAlt className="text-3xl text-slate-300" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">
+              No Events Found
             </h2>
-            <p className="text-slate-500 mt-2">
-              অন্য কোনো নামে বা ক্যাটাগরিতে সার্চ করে দেখুন।
+            <p className="text-slate-500 mt-2 font-medium">
+              আপনার সার্চের সাথে মেলে এমন কোনো ইভেন্ট পাওয়া যায়নি।
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {events.map((event) => (
               <div
                 key={event._id}
-                className="card-pro group flex flex-col h-full border border-slate-100 dark:border-slate-800/50 transition-all duration-500"
+                className="group bg-white dark:bg-slate-900 rounded-[2.5rem] flex flex-col h-full border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden"
               >
                 {/* ইমেজ সেকশন */}
-                <div className="relative h-56 overflow-hidden rounded-t-[--radius-card]">
+                <div className="relative h-64 overflow-hidden">
                   <img
-                    src={event.image}
+                    src={event.image || "https://placehold.co/600x400"}
                     alt={event.eventName}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                   />
-                  <div className="absolute top-4 left-4">
-                    <span className="px-4 py-1.5 bg-secondary text-white text-xs font-bold rounded-full shadow-lg">
-                      {event.category || event.eventType}
+                  <div className="absolute top-6 left-6">
+                    <span className="px-4 py-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-xl">
+                      {event.category || "Social"}
                     </span>
                   </div>
                 </div>
 
                 {/* কার্ড ডিটেইলস */}
-                <div className="p-6 flex flex-col flex-grow space-y-4">
-                  <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white group-hover:text-secondary transition-colors line-clamp-1">
+                <div className="p-8 flex flex-col flex-grow">
+                  <h2 className="text-2xl font-black text-slate-800 dark:text-white group-hover:text-secondary transition-colors line-clamp-1 uppercase tracking-tight mb-4">
                     {event.eventName}
                   </h2>
 
-                  <div className="flex flex-wrap gap-4 text-sm font-semibold text-slate-500 dark:text-slate-400">
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-center gap-3 text-sm font-bold text-slate-500">
                       <FaCalendarAlt className="text-secondary" />
-                      {new Date(event.eventDate).toLocaleDateString("bn-BD", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      <span>
+                        {new Date(event.eventDate).toLocaleDateString("bn-BD", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <FaMapMarkerAlt className="text-secondary" />
-                      {event.location}
+                    <div className="flex items-center gap-3 text-sm font-bold text-slate-500">
+                      <FaMapMarkerAlt className="text-red-500" />
+                      <span className="truncate">{event.location}</span>
                     </div>
                   </div>
 
-                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed line-clamp-3 flex-grow">
+                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed line-clamp-2 mb-8 font-medium">
                     {event.description}
                   </p>
 
-                  <div className="pt-6 border-t border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2 bg-secondary/10 px-3 py-1.5 rounded-lg">
-                      <FaUsers className="text-secondary" />
-                      <span className="text-secondary font-bold text-sm">
-                        {event.participants || 0} Joined
+                  <div className="mt-auto pt-6 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex -space-x-2">
+                        {[1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 overflow-hidden"
+                          >
+                            <img
+                              src={`https://i.pravatar.cc/100?img=${i + 10}`}
+                              alt=""
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-slate-400 font-black text-[10px] uppercase tracking-wider ml-1">
+                        +{event.participants || 0} Joined
                       </span>
                     </div>
-                    <Link to={`/event-details/${event._id}`}>
-                      <button className="btn-pro px-6 py-2.5 text-sm font-bold shadow-md active:scale-95 transition-all">
-                        Details & Join
+
+                    <Link
+                      to={`/event-details/${event._id}`}
+                      className="w-full sm:w-auto"
+                    >
+                      <button className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 dark:bg-slate-800 text-white text-xs font-black uppercase tracking-widest rounded-2xl group-hover:bg-secondary transition-all shadow-lg active:scale-95 w-full sm:w-auto">
+                        বিস্তারিত দেখুন <FaArrowRight className="text-[10px]" />
                       </button>
                     </Link>
                   </div>

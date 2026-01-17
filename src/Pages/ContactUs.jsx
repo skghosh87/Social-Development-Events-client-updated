@@ -103,7 +103,6 @@ const ContactUs = () => {
             </div>
           </div>
 
-          {/* Contact Form (Requirement 1: Forms with validation) */}
           <div className="lg:col-span-2">
             <div className="card-pro p-8 md:p-12">
               <h2 className="text-2xl font-bold mb-8 dark:text-white">

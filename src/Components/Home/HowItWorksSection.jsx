@@ -59,7 +59,6 @@ const HowItWorksSection = () => {
               key={step.id}
               className="card-pro p-8 relative flex flex-col h-full group border border-slate-100 dark:border-slate-800/50"
             >
-              {/* স্টেপ নাম্বার ব্যাজ - আগের ডিজাইনগুলোর সাথে মিল রেখে */}
               <div className="absolute top-6 right-8 text-5xl font-black text-slate-200 dark:text-slate-800/40 group-hover:text-secondary/20 transition-colors">
                 0{index + 1}
               </div>
@@ -79,7 +78,6 @@ const HowItWorksSection = () => {
                 </p>
               </div>
 
-              {/* ডেকোরেটিভ বর্ডার লাইট (নিচে) */}
               <div className="absolute bottom-0 left-0 w-0 h-1 bg-secondary group-hover:w-full transition-all duration-500"></div>
             </div>
           ))}

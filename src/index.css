@@ -33,9 +33,6 @@
     font-family: "Inter", sans-serif;
   }
 
-  /* সংশোধন: এখানে শুধুমাত্র text-primary দিলে সব h1 নীল হয়ে যায়। 
-     তাই আমরা এমনভাবে লিখব যেন ক্লাসের মাধ্যমে কালার কন্ট্রোল করা যায়।
-  */
   h1,
   h2,
   h3 {
@@ -103,5 +100,15 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+/* কাস্টম ইউটিলিটি: স্ক্রলবার হাইড করার জন্য */
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

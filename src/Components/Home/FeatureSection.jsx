@@ -72,7 +72,6 @@ const FeatureSection = () => {
                 <feature.icon size={40} />
               </div>
 
-              {/* Title - Automatic Blue/White based on Theme via index.css */}
               <h3 className="text-xl font-bold mb-3 dark:text-white">
                 {feature.title}
               </h3>

@@ -1,33 +1,28 @@
 import React, { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FaSave, FaTimes, FaCalendarAlt } from "react-icons/fa";
-import axios from "axios";
+import { FaSave, FaTimes, FaCalendarAlt, FaSpinner } from "react-icons/fa";
 import { toast } from "react-toastify";
+import useAxiosSecure from "../Hooks/useAxiosSecure";
 
-const UpdateEventModal = ({
-  event,
-  onClose,
-  onUpdateSuccess,
-  SERVER_BASE_URL,
-  userEmail,
-}) => {
+const UpdateEventModal = ({ event, onClose, onUpdateSuccess, userEmail }) => {
+  const axiosSecure = useAxiosSecure();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ইভেন্টের বর্তমান ডাটা দিয়ে স্টেট সেট করা
   const [formData, setFormData] = useState({
-    eventName: event.eventName,
-    category: event.category,
-    location: event.location,
-    description: event.description,
-    image: event.image,
+    eventName: event?.eventName || "",
+    category: event?.category || "",
+    location: event?.location || "",
+    description: event?.description || "",
+    image: event?.image || "",
   });
 
   const [eventDate, setEventDate] = useState(new Date(event.eventDate));
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleUpdate = async (e) => {
@@ -36,30 +31,27 @@ const UpdateEventModal = ({
 
     const updatedEventData = {
       ...formData,
-
       eventDate: eventDate.toISOString(),
-
-      organizerEmail: userEmail,
+      updatedAt: new Date().toISOString(),
     };
 
     try {
-      const response = await axios.put(
-        `${SERVER_BASE_URL}/api/events/${event._id}`,
+      const response = await axiosSecure.patch(
+        `/api/events/${event._id}`,
         updatedEventData
       );
 
-      if (response.data.success) {
-        toast.success("✨ Event updated successfully!");
+      if (response.data.modifiedCount > 0 || response.data.matchedCount > 0) {
+        toast.success("✨ ইভেন্টটি সফলভাবে আপডেট করা হয়েছে!");
         onUpdateSuccess();
         onClose();
       } else {
-        toast.error(response.data.message || "❌ Event update failed!");
+        toast.info("কোনো পরিবর্তন করা হয়নি।");
       }
     } catch (error) {
-      console.error("Error updating event:", error);
+      console.error("Update Error:", error);
       const errorMessage =
-        error.response?.data?.message ||
-        "An unexpected error occurred during update.";
+        error.response?.data?.message || "ইভেন্ট আপডেট করতে সমস্যা হয়েছে।";
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -67,30 +59,31 @@ const UpdateEventModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl p-6 relative">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-white/10 overflow-hidden animate-zoomIn">
         {/* Modal Header */}
-        <div className="flex justify-between items-center border-b pb-3 mb-4">
-          <h3 className="text-2xl font-bold text-blue-700">
-            Edit Event: {event.eventName}
+        <div className="flex items-center justify-between p-8 border-b border-slate-100 dark:border-slate-800">
+          <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">
+            Edit Event:{" "}
+            <span className="text-secondary">{event.eventName}</span>
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-red-500 transition"
+            className="text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
           >
-            <FaTimes className="text-2xl" />
+            <FaTimes size={20} />
           </button>
         </div>
 
         {/* Modal Body / Form */}
         <form
           onSubmit={handleUpdate}
-          className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
+          className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar"
         >
-          {/* Event Name & Category */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Event Name */}
+            <div className="md:col-span-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">
                 Event Title
               </label>
               <input
@@ -98,47 +91,32 @@ const UpdateEventModal = ({
                 name="eventName"
                 value={formData.eventName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                 required
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
               />
             </div>
+
+            {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">
                 Category
               </label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                required
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
               >
-                <option value="Environment">Environment & Ecology</option>
-                <option value="Education">Education & Skill Building</option>
-                <option value="Health">Health & Wellness</option>
-                <option value="Community">Community Building</option>
                 <option value="Welfare">Social Welfare</option>
+                <option value="Environment">Environment</option>
+                <option value="Education">Education</option>
+                <option value="Health">Healthcare</option>
               </select>
             </div>
-          </div>
 
-          {/* Image URL & Location */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Location */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Image URL
-              </label>
-              <input
-                type="url"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">
                 Location
               </label>
               <input
@@ -146,58 +124,79 @@ const UpdateEventModal = ({
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                required
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
+              />
+            </div>
+
+            {/* Event Date Picker */}
+            <div className="md:col-span-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1 flex items-center gap-2">
+                <FaCalendarAlt className="text-secondary" /> Event Date & Time
+              </label>
+              <DatePicker
+                selected={eventDate}
+                onChange={(date) => setEventDate(date)}
+                showTimeSelect
+                dateFormat="Pp"
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all cursor-pointer"
+                required
+              />
+            </div>
+
+            {/* Image URL */}
+            <div className="md:col-span-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">
+                Image URL
+              </label>
+              <input
+                type="url"
+                name="image"
+                value={formData.image}
+                onChange={handleChange}
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
+                placeholder="https://..."
                 required
               />
             </div>
           </div>
 
-          {/* Event Date/Time Picker */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-              <FaCalendarAlt className="text-blue-500" /> Event Date & Time
-            </label>
-            <DatePicker
-              selected={eventDate}
-              onChange={(date) => setEventDate(date)}
-              showTimeSelect
-              dateFormat="Pp"
-              minDate={new Date()}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
-              required
-            />
-          </div>
-
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">
               Description
             </label>
             <textarea
               name="description"
-              rows="3"
+              rows="4"
               value={formData.description}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
               required
+              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-secondary transition-all"
             ></textarea>
           </div>
 
-          {/* Modal Footer / Buttons */}
-          <div className="pt-4 flex justify-end space-x-3 border-t">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="btn bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold rounded-lg transition"
+              className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-200 transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="btn bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition disabled:opacity-50"
               disabled={isSubmitting}
+              className="flex-[2] py-4 bg-secondary text-white font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2 hover:bg-blue-700 transition-all disabled:opacity-50"
             >
-              <FaSave /> {isSubmitting ? "Updating..." : "Save Changes"}
+              {isSubmitting ? (
+                <FaSpinner className="animate-spin text-lg" />
+              ) : (
+                <>
+                  <FaSave className="text-lg" /> Save Changes
+                </>
+              )}
             </button>
           </div>
         </form>

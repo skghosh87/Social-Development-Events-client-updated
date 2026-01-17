@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { AuthContext } from "./AuthContext"; // আপনার আলাদা কনটেক্সট ফাইলটি ইম্পোর্ট করা হলো
+import { AuthContext } from "./AuthContext";
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
@@ -18,76 +18,86 @@ const googleProvider = new GoogleAuthProvider();
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null); // ডাটাবেজ থেকে আসা রোল (admin/user)
-  const [status, setStatus] = useState(null); // ইউজারের স্ট্যাটাস (active/suspended)
+  const [role, setRole] = useState(null);
+  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ১. নতুন ইউজার তৈরি
+  const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
+
   const createUser = (email, password) => {
     setLoading(true);
     return createUserWithEmailAndPassword(auth, email, password);
   };
 
-  // ২. ইমেইল-পাসওয়ার্ড দিয়ে লগইন
   const signIn = (email, password) => {
     setLoading(true);
     return signInWithEmailAndPassword(auth, email, password);
   };
 
-  // ৩. গুগল লগইন
   const signInWithGoogle = () => {
     setLoading(true);
     return signInWithPopup(auth, googleProvider);
   };
 
-  // ৪. প্রোফাইল আপডেট
   const updateUserProfile = (displayName, photoURL) => {
     return updateProfile(auth.currentUser, { displayName, photoURL });
   };
 
-  // ৫. পাসওয়ার্ড রিসেট
   const resetPassword = (email) => {
     setLoading(true);
     return sendPasswordResetEmail(auth, email);
   };
 
-  // ৬. লগআউট
   const logOut = () => {
     setLoading(true);
+    localStorage.removeItem("access-token"); // লগআউট করলে টোকেন মুছে ফেলা হবে
     setRole(null);
     setStatus(null);
     return signOut(auth);
   };
 
-  // ৭. ইউজার এবং রোল ম্যানেজমেন্ট (অটোমেটিক মনিটর)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
 
       if (currentUser?.email) {
         try {
-          // আপনার ব্যাকএন্ড থেকে ইউজারের রোল এবং স্ট্যাটাস চেক করা
-          const res = await axios.get(
-            `https://social-development-events-seven.vercel.app/api/users/role/${currentUser.email}`
-          );
-          setRole(res.data.role);
-          setStatus(res.data.status);
+          // ১. JWT টোকেন সংগ্রহ
+          const tokenRes = await axios.post(`${SERVER_BASE_URL}/api/jwt`, {
+            email: currentUser.email,
+          });
+
+          if (tokenRes.data.token) {
+            const token = tokenRes.data.token;
+            localStorage.setItem("access-token", token);
+
+            // ২. রোল এবং স্ট্যাটাস সংগ্রহ
+            const res = await axios.get(
+              `${SERVER_BASE_URL}/api/users/role/${currentUser.email}`,
+              { headers: { authorization: `Bearer ${token}` } }
+            );
+
+            setRole(res.data.admin ? "admin" : "user");
+            setStatus(res.data.status);
+          }
         } catch (error) {
-          console.error("Error fetching user role from DB:", error);
-          setRole("user"); // কোনো এরর হলে ডিফল্ট 'user' হিসেবে রাখা নিরাপদ
+          console.error("Auth sync error:", error);
+          setRole("user");
+        } finally {
+          // সব ডাটা লোড হওয়ার পর লোডিং ফলস হবে
+          setLoading(false);
         }
       } else {
+        localStorage.removeItem("access-token");
         setRole(null);
         setStatus(null);
+        setLoading(false); // ইউজার না থাকলেও লোডিং ফলস হবে
       }
-
-      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [SERVER_BASE_URL]);
 
-  // কনটেক্সটের মাধ্যমে শেয়ার করা সব তথ্য
   const authInfo = {
     user,
     role,

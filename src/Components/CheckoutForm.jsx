@@ -1,77 +1,80 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import axios from "axios";
-import { toast } from "react-toastify";
-import { FaCreditCard, FaLock, FaDollarSign } from "react-icons/fa";
+import { FaLock, FaDollarSign, FaCheckCircle } from "react-icons/fa";
 import { useAuth } from "../Hooks/useAuth";
+import useAxiosSecure from "../Hooks/useAxiosSecure";
 
-const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
 const MIN_AMOUNT = 5;
 
-const CheckoutForm = ({ onPaymentSuccess }) => {
+const CheckoutForm = ({ onPaymentSuccess, price }) => {
   const stripe = useStripe();
   const elements = useElements();
   const { user } = useAuth();
+  const axiosSecure = useAxiosSecure();
 
-  const [amount, setAmount] = useState(MIN_AMOUNT);
+  const [amount, setAmount] = useState(price || MIN_AMOUNT);
   const [clientSecret, setClientSecret] = useState("");
   const [cardError, setCardError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSecretLoading, setIsSecretLoading] = useState(false);
+  const [paymentDone, setPaymentDone] = useState(false);
 
-  // 🔐 Payment Intent তৈরি (Debounced)
+  // একাধিকবার একই এপিআই কল রোধ করতে useRef ব্যবহার
+  const lastFetchedAmount = useRef(null);
+
+  /* ==========================================
+      ১. Client Secret জেনারেট করা
+     ========================================== */
   useEffect(() => {
-    if (amount < MIN_AMOUNT) {
-      setClientSecret("");
-      return;
+    // প্রপস থেকে আসা প্রাইস আপডেট হলে লোকাল স্টেট আপডেট করা
+    if (price && price !== amount) {
+      setAmount(price);
     }
+  }, [price]);
 
-    let isMounted = true;
-    setIsSecretLoading(true);
+  useEffect(() => {
+    if (amount < MIN_AMOUNT || amount === lastFetchedAmount.current) return;
 
-    const timer = setTimeout(async () => {
+    const fetchClientSecret = async () => {
+      setIsSecretLoading(true);
       try {
-        const res = await axios.post(
-          `${SERVER_BASE_URL}/api/create-payment-intent`,
-          { price: amount }
-        );
+        const res = await axiosSecure.post("/api/create-payment-intent", {
+          price: amount,
+        });
 
-        if (isMounted && res.data?.clientSecret) {
+        if (res.data?.clientSecret) {
           setClientSecret(res.data.clientSecret);
+          lastFetchedAmount.current = amount;
         }
       } catch (err) {
-        console.error("Stripe Client Secret Error:", err);
-        setClientSecret("");
+        console.error("Stripe Secret Error:", err);
+        setCardError("পেমেন্ট গেটওয়ে কানেক্ট করা যাচ্ছে না।");
       } finally {
-        if (isMounted) setIsSecretLoading(false);
+        setIsSecretLoading(false);
       }
-    }, 600);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
     };
-  }, [amount]);
 
-  // 💳 Payment Submit
+    const timer = setTimeout(fetchClientSecret, 500);
+    return () => clearTimeout(timer);
+  }, [amount, axiosSecure]);
+
+  /* ==========================================
+      ২. পেমেন্ট সাবমিট করা
+     ========================================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!stripe || !elements || !clientSecret) return;
+    if (!stripe || !elements || !clientSecret || isProcessing) return;
 
     const card = elements.getElement(CardElement);
-    if (!card) {
-      setCardError("কার্ড ইনপুট পাওয়া যায়নি।");
-      return;
-    }
+    if (!card) return;
 
     setIsProcessing(true);
     setCardError("");
 
     try {
-      const { paymentIntent, error } = await stripe.confirmCardPayment(
-        clientSecret,
-        {
+      const { paymentIntent, error: confirmError } =
+        await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card,
             billing_details: {
@@ -79,126 +82,115 @@ const CheckoutForm = ({ onPaymentSuccess }) => {
               email: user?.email || "unknown@email.com",
             },
           },
-        }
-      );
+        });
 
-      if (error) {
-        setCardError(error.message || "পেমেন্ট ব্যর্থ হয়েছে।");
+      if (confirmError) {
+        setCardError(confirmError.message);
+        setIsProcessing(false);
       } else if (paymentIntent?.status === "succeeded") {
-        toast.success(`$${amount} পেমেন্ট সফল হয়েছে 🎉`);
-        onPaymentSuccess?.(paymentIntent.id, amount);
+        setPaymentDone(true);
+        setIsProcessing(false);
+        // মেইন পেজে ট্রানজেকশন আইডি এবং এমাউন্ট পাঠানো
+        if (onPaymentSuccess) {
+          onPaymentSuccess(paymentIntent.id, amount);
+        }
       }
     } catch (err) {
-      console.error("Payment Error:", err);
-      setCardError("পেমেন্ট সম্পন্ন করতে সমস্যা হয়েছে।");
-    } finally {
+      console.error("Payment Execution Error:", err);
+      setCardError("পেমেন্ট প্রসেস করার সময় ত্রুটি হয়েছে।");
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="bg-white">
+    <div className="bg-transparent">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Amount Input Section */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            সহযোগিতার পরিমাণ ($)
+        {/* Amount Input */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-[2px] text-slate-400 ml-1">
+            Contribution Amount ($)
           </label>
-
           <div className="relative">
-            <FaDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500" />
+            <FaDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary z-10" />
             <input
               type="number"
               min={MIN_AMOUNT}
-              step="1" // এখানে ১ ডলার করে ইনক্রিমেন্ট হবে
               value={amount}
-              onChange={(e) =>
-                setAmount(Math.max(0, Number(e.target.value) || 0))
-              }
-              className="pl-9 w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-800"
+              onChange={(e) => setAmount(Number(e.target.value))}
+              className="w-full pl-10 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-secondary/50 font-bold dark:text-white transition-all"
               required
+              disabled={paymentDone || isProcessing}
             />
           </div>
-
-          {amount > 0 && amount < MIN_AMOUNT && (
-            <p className="text-xs text-red-500 mt-1 italic">
-              সর্বনিম্ন ${MIN_AMOUNT} প্রদান করতে হবে
-            </p>
-          )}
         </div>
 
-        {/* Card Section - Input Focus Fix Applied */}
-        <div className="relative z-[110]">
-          <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-            <div className="flex items-center gap-2">
-              <FaCreditCard className="text-blue-500" /> কার্ডের তথ্য প্রদান
-              করুন
-            </div>
+        {/* Card Element */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between ml-1">
+            <label className="text-[10px] font-black uppercase tracking-[2px] text-slate-400">
+              Card Details
+            </label>
             {isSecretLoading && (
-              <span className="text-blue-500 text-xs animate-pulse font-medium">
-                ইনিশিয়েলাইজ হচ্ছে...
+              <span className="text-[10px] text-secondary animate-pulse font-bold uppercase">
+                Securing...
               </span>
             )}
           </div>
 
-          <div className="p-4 border-2 border-gray-100 rounded-xl focus-within:border-blue-400 bg-white min-h-[50px] shadow-sm transition-all">
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 shadow-inner">
             <CardElement
               options={{
                 style: {
                   base: {
                     fontSize: "16px",
-                    color: "#1a202c", // টেক্সট কালার ডার্ক রাখা হয়েছে যাতে দৃশ্যমান হয়
-                    letterSpacing: "0.025em",
-                    "::placeholder": {
-                      color: "#a0aec0",
-                    },
-                    fontFamily: "Inter, sans-serif",
+                    color: window.matchMedia("(prefers-color-scheme: dark)")
+                      .matches
+                      ? "#ffffff"
+                      : "#424770",
+                    "::placeholder": { color: "#aab7c4" },
+                    fontFamily: "'Inter', sans-serif",
                   },
-                  invalid: {
-                    color: "#e53e3e",
-                  },
+                  invalid: { color: "#ef4444" },
                 },
               }}
             />
           </div>
         </div>
 
-        {/* Error Display */}
         {cardError && (
-          <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg border border-red-100 flex items-center gap-2">
-            <span>⚠️ {cardError}</span>
+          <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20">
+            <p className="text-xs text-red-500 font-bold flex items-center gap-2">
+              ⚠️ {cardError}
+            </p>
           </div>
         )}
 
-        {/* Submit Button */}
         <button
           type="submit"
-          disabled={
-            !stripe ||
-            !clientSecret ||
-            isProcessing ||
-            amount < MIN_AMOUNT ||
-            isSecretLoading
-          }
-          className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-md ${
-            isProcessing || !clientSecret || amount < MIN_AMOUNT
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg active:scale-[0.98]"
+          disabled={!stripe || !clientSecret || isProcessing || paymentDone}
+          className={`w-full py-5 rounded-[2rem] font-black uppercase tracking-widest text-sm flex items-center justify-center gap-3 transition-all duration-300 shadow-2xl ${
+            paymentDone
+              ? "bg-green-500 text-white"
+              : isProcessing || !clientSecret
+              ? "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+              : "bg-secondary hover:bg-blue-700 text-white active:scale-95"
           }`}
         >
           {isProcessing ? (
-            <span className="animate-spin h-6 w-6 border-b-2 border-white rounded-full"></span>
+            <span className="flex items-center gap-2">
+              <span className="loading loading-spinner loading-sm"></span>{" "}
+              Processing...
+            </span>
+          ) : paymentDone ? (
+            <>
+              <FaCheckCircle size={18} /> Verified & Paid
+            </>
           ) : (
             <>
-              <FaLock className="text-sm opacity-80" />
-              Pay ${amount} Securely
+              <FaLock size={14} /> Confirm ${amount} Payment
             </>
           )}
         </button>
-
-        <p className="text-[10px] text-center text-gray-400 uppercase tracking-widest font-semibold">
-          🛡️ Secured by Stripe
-        </p>
       </form>
     </div>
   );

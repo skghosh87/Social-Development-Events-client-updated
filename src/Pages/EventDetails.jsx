@@ -1,202 +1,289 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../Hooks/useAuth";
-import axios from "axios";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import CheckoutForm from "../Components/CheckoutForm";
+import Container from "../Components/Container";
+import useAxiosSecure from "../Hooks/useAxiosSecure";
+import axios from "axios";
+import {
+  FaCalendarAlt,
+  FaMapMarkerAlt,
+  FaCheckCircle,
+  FaLock,
+  FaExternalLinkAlt,
+  FaUsers,
+  FaTimes,
+  FaDonate,
+} from "react-icons/fa";
 
-// স্ট্রাইপ পাবলিশেবল কি লোড করা
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
 
 const EventDetails = () => {
   const { id } = useParams();
   const { user, loading: authLoading } = useAuth();
+  const axiosSecure = useAxiosSecure();
   const navigate = useNavigate();
 
   const [event, setEvent] = useState(null);
   const [userRole, setUserRole] = useState("user");
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isJoined, setIsJoined] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  const SERVER_BASE_URL = "https://social-development-events-seven.vercel.app";
-
-  // ১. ইভেন্ট ডাটা এবং ইউজারের রোল লোড করা
+  /* ===============================
+      ১. ইভেন্ট ডাটা লোড করা (Public)
+  =============================== */
   useEffect(() => {
-    const fetchEventData = async () => {
+    const loadEvent = async () => {
       try {
         setIsLoading(true);
-        // ইভেন্ট ডিটেইলস আনা
-        const eventRes = await axios.get(`${SERVER_BASE_URL}/api/events/${id}`);
-        setEvent(eventRes.data.event);
-
-        // ইউজারের রোল চেক করা
-        if (user?.email) {
-          const roleRes = await axios.get(
-            `${SERVER_BASE_URL}/api/users/role/${user.email}`
-          );
-          setUserRole(roleRes.data.role);
-        }
+        const res = await axios.get(`${SERVER_BASE_URL}/api/events/${id}`);
+        setEvent(res.data);
       } catch (err) {
-        console.error("Error fetching data:", err);
-        toast.error("ইভেন্টের তথ্য লোড করতে সমস্যা হয়েছে।");
+        console.error(err);
+        toast.error("ইভেন্ট খুঁজে পাওয়া যায়নি!");
       } finally {
         setIsLoading(false);
       }
     };
+    if (id) loadEvent();
+  }, [id]);
 
-    fetchEventData();
-  }, [id, user?.email]);
+  /* ===============================
+      ২. রোল এবং পেমেন্ট স্ট্যাটাস চেক
+=============================== */
+  useEffect(() => {
+    if (!user?.email || !id) return;
 
-  if (isLoading || authLoading)
-    return <div className="text-center py-20 font-bold">Loading...</div>;
-  if (!event)
-    return (
-      <div className="text-center py-20 text-red-500">Event not found!</div>
-    );
+    const checkStatus = async () => {
+      try {
+        const roleRes = await axiosSecure.get(`/api/users/role/${user.email}`);
+        setUserRole(roleRes.data.admin ? "admin" : "user");
+
+        const joinedRes = await axiosSecure.get(
+          `/api/joined-events/${user.email}`
+        );
+
+        const hasJoined = joinedRes.data.some(
+          (joinedEvent) => joinedEvent.eventId === id || joinedEvent._id === id
+        );
+
+        if (hasJoined) {
+          setIsJoined(true);
+
+          const paymentData = joinedRes.data.find((e) => e.eventId === id);
+          setPaymentInfo(paymentData);
+        } else {
+          setIsJoined(false);
+        }
+      } catch (err) {
+        console.error("Status check error:", err);
+      }
+    };
+
+    checkStatus();
+  }, [user?.email, id, axiosSecure]);
 
   const isAdmin = userRole === "admin";
   const isOrganizer = user?.email === event?.organizerEmail;
 
-  // ২. জয়েন বাটনের লজিক
   const handleJoinClick = () => {
     if (!user) {
-      toast.warning("এই ইভেন্টে জয়েন করতে আগে লগইন করুন।");
+      toast.warning("জয়েন করতে আগে লগইন করুন।");
       return navigate("/login");
     }
-
-    // অ্যাডমিন বা অর্গানাইজার হলে সরাসরি জয়েন
-    if (isAdmin || isOrganizer) {
-      proceedToJoin("free", 0);
-    } else {
-      // সাধারণ ইউজার হলে পেমেন্ট মডাল
-      setShowPaymentModal(true);
-    }
+    setShowPaymentModal(true);
   };
 
-  // ৩. ডাটাবেজে জয়েনিং এবং পেমেন্ট সেভ করার ফাংশন
-  const proceedToJoin = async (transactionId, paidAmount = 0) => {
+  /* ===============================
+      ৩. ইভেন্টে জয়েন করার ফাংশন
+  =============================== */
+  const proceedToJoin = async (transactionId, paidAmount) => {
     try {
       const joinData = {
-        eventId: event._id,
+        eventId: id,
         eventName: event.eventName,
-        userEmail: user.email,
-        userName: user.displayName || "Anonymous",
-        transactionId: transactionId || "free",
-        amount: parseFloat(paidAmount),
-        date: new Date().toISOString(),
+        eventDate: event.eventDate,
+        amount: Number(paidAmount),
+        transactionId,
       };
 
-      const res = await axios.post(
-        `${SERVER_BASE_URL}/api/join-event`,
-        joinData
-      );
+      const res = await axiosSecure.post("/api/join-event", joinData);
 
-      if (res.data.success) {
-        toast.success(
-          paidAmount > 0
-            ? `$${paidAmount} পেমেন্ট এবং জয়েন সফল হয়েছে!`
-            : "সফলভাবে জয়েন করেছেন!"
-        );
+      if (res.data.insertedId) {
+        toast.success("অভিনন্দন! আপনি সফলভাবে ইভেন্টে যুক্ত হয়েছেন।");
+        setIsJoined(true);
+        setPaymentInfo({ transactionId });
         setShowPaymentModal(false);
-        // জয়েন করার পর রিফ্রেশ বা রিডাইরেক্ট করতে পারেন
+
+        setEvent((prev) => ({
+          ...prev,
+          participants: (prev.participants || 0) + 1,
+        }));
       }
-    } catch (error) {
-      if (error.response?.status === 409) {
-        toast.info("আপনি ইতিমধ্যে এই ইভেন্টে জয়েন করেছেন।");
-      } else {
-        toast.error("জয়েন করতে সমস্যা হয়েছে, আবার চেষ্টা করুন।");
-      }
-      setShowPaymentModal(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "জয়েন করতে সমস্যা হয়েছে।");
     }
   };
 
-  return (
-    <div className="max-w-4xl mx-auto p-6 font-sans">
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-        <img
-          src={event.image || "https://via.placeholder.com/800x400"}
-          alt={event.eventName}
-          className="w-full h-96 object-cover"
-        />
-
-        <div className="p-8">
-          <div className="flex justify-between items-start mb-4">
-            <h1 className="text-4xl font-bold text-gray-800">
-              {event.eventName}
-            </h1>
-            <span className="px-4 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold uppercase">
-              {event.category || "General"}
-            </span>
-          </div>
-
-          <p className="text-gray-600 mb-8 leading-relaxed text-lg">
-            {event.description}
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="bg-blue-50 p-5 rounded-xl flex flex-col">
-              <span className="text-blue-600 text-sm font-bold uppercase mb-1">
-                Date & Time
-              </span>
-              <span className="text-gray-800 font-semibold">
-                {event.eventDate}
-              </span>
-            </div>
-            <div className="bg-emerald-50 p-5 rounded-xl flex flex-col">
-              <span className="text-emerald-600 text-sm font-bold uppercase mb-1">
-                Location
-              </span>
-              <span className="text-gray-800 font-semibold">
-                {event.location}
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleJoinClick}
-            className="w-full py-4 bg-green-600 text-white text-xl font-bold rounded-xl hover:bg-green-700 hover:shadow-lg transition duration-300"
-          >
-            {isAdmin || isOrganizer ? "Access Event Panel" : "Join This Event"}
-          </button>
-        </div>
+  if (isLoading || authLoading) {
+    return (
+      <div className="flex justify-center items-center h-[70vh]">
+        <span className="loading loading-spinner loading-lg text-secondary"></span>
       </div>
+    );
+  }
 
-      {/* পেমেন্ট মডাল */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl">
-            <button
-              onClick={() => setShowPaymentModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition text-2xl"
-            >
-              ✕
-            </button>
+  if (!event)
+    return (
+      <div className="text-center py-20 font-bold">ইভেন্ট পাওয়া যায়নি!</div>
+    );
 
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                সহযোগিতার হাত বাড়িয়ে দিন
-              </h2>
-              <p className="text-gray-500 text-sm">
-                ঢাকা শহরকে পরিষ্কার রাখতে এই ইভেন্টে অংশ নিতে নূন্যতম{" "}
-                <strong className="text-green-600">$৫</strong> পেমেন্ট করুন।
+  return (
+    <div className="py-12 bg-slate-50 dark:bg-slate-950 min-h-screen">
+      <Container>
+        <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800">
+          {/* Hero Section */}
+          <div className="relative h-[400px]">
+            <img
+              src={event.image}
+              className="w-full h-full object-cover"
+              alt={event.eventName}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+            <div className="absolute bottom-8 left-8">
+              <span className="px-4 py-1 bg-secondary text-white text-[10px] font-black uppercase tracking-widest rounded-full mb-3 inline-block">
+                {event.category}
+              </span>
+              <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">
+                {event.eventName}
+              </h1>
+            </div>
+          </div>
+
+          <div className="p-10">
+            {/* Info Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
+                <FaCalendarAlt className="text-secondary text-2xl" />
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">
+                    তারিখ
+                  </p>
+                  <p className="font-bold dark:text-white">
+                    {new Date(event.eventDate).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
+                <FaMapMarkerAlt className="text-secondary text-2xl" />
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">
+                    স্থান
+                  </p>
+                  <p className="font-bold dark:text-white">{event.location}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
+                <FaUsers className="text-secondary text-2xl" />
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">
+                    অংশগ্রহণকারী
+                  </p>
+                  <p className="font-bold dark:text-white">
+                    {event.participants || 0} জন যুক্ত
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mb-12">
+              <h3 className="text-xl font-black uppercase tracking-tight mb-4 dark:text-white">
+                ইভেন্ট সম্পর্কে
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                {event.description}
               </p>
             </div>
 
-            <div className="border-t border-gray-100 pt-6">
-              <Elements stripe={stripePromise}>
-                <CheckoutForm
-                  price={5} // নূন্যতম ৫ ডলার প্রপস হিসেবে পাঠানো হচ্ছে
-                  onPaymentSuccess={(trxId, amount) =>
-                    proceedToJoin(trxId, amount)
-                  }
-                />
-              </Elements>
+            {/* Action Buttons with Conditional Logic */}
+            <div className="border-t dark:border-slate-800 pt-8">
+              {isAdmin || isOrganizer ? (
+                <button
+                  onClick={() => navigate("/dashboard/manage-events")}
+                  className="w-full py-5 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-[1.02] transition-all"
+                >
+                  <FaExternalLinkAlt /> এডমিন প্যানেল থেকে ম্যানেজ করুন
+                </button>
+              ) : isJoined ? (
+                /* ইউজার আগে জয়েন করলে এই সেকশনটি দেখাবে */
+                <div className="w-full py-6 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-[2rem] text-center">
+                  <div className="flex items-center justify-center gap-3 text-green-600 dark:text-green-400 font-black uppercase tracking-widest text-lg mb-1">
+                    <FaCheckCircle size={24} />
+                    আপনি আগে থেকেই যুক্ত আছেন
+                  </div>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                    ট্রানজেকশন আইডি:{" "}
+                    <span className="text-slate-600 dark:text-slate-300">
+                      {paymentInfo?.transactionId}
+                    </span>
+                  </p>
+                </div>
+              ) : (
+                /* জয়েন না করলে বাটন দেখাবে */
+                <button
+                  onClick={handleJoinClick}
+                  className="w-full py-5 bg-secondary hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20 hover:scale-[1.02] transition-all"
+                >
+                  <FaLock /> ইভেন্টে জয়েন করুন
+                </button>
+              )}
             </div>
           </div>
         </div>
-      )}
+
+        {/* পেমেন্ট মডাল */}
+        {showPaymentModal && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
+              onClick={() => setShowPaymentModal(false)}
+            />
+            <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-[3rem] p-10 shadow-2xl border border-white/20 animate-in zoom-in duration-300">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="absolute top-8 right-8 text-slate-400 hover:text-secondary transition-all"
+              >
+                <FaTimes size={24} />
+              </button>
+
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-secondary/10 text-secondary rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <FaDonate size={28} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">
+                  পেমেন্ট সম্পন্ন করুন
+                </h2>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">
+                  নিরাপদ পেমেন্ট গেটওয়ে
+                </p>
+              </div>
+
+              <Elements stripe={stripePromise}>
+                <CheckoutForm onPaymentSuccess={proceedToJoin} price={5} />
+              </Elements>
+            </div>
+          </div>
+        )}
+
+        <ToastContainer theme="colored" position="bottom-right" />
+      </Container>
     </div>
   );
 };

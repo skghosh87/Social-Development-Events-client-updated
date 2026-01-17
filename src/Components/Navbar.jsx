@@ -1,17 +1,16 @@
+import React, { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import logo from "/Logo.png";
 import { toast } from "react-toastify";
-import { useEffect, useState } from "react";
-
-import Container from "./Container";
 import { FaUserCircle, FaSignOutAlt, FaTachometerAlt } from "react-icons/fa";
 import { useAuth } from "../Hooks/useAuth";
+import Container from "./Container";
 
 const DEFAULT_AVATAR = "/default-user.png";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { user, logOut, loading } = useAuth();
+  const { user, logOut, loading } = useAuth(); // role সরিয়ে দেওয়া হলো কারণ এখানে লাগছে না
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
 
   useEffect(() => {
@@ -33,7 +32,6 @@ const Navbar = () => {
       .catch((e) => toast.error(e.message));
   };
 
-  // NavLink স্টাইল - ফন্ট আরও বোল্ড করা হয়েছে (font-semibold/font-bold)
   const navStyles = ({ isActive }) =>
     `relative py-1 transition-all duration-300 ${
       isActive
@@ -78,10 +76,10 @@ const Navbar = () => {
   if (loading) {
     return (
       <div className="bg-white dark:bg-slate-950 py-3 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
-        <Container className="flex items-center justify-between h-[50px]">
-          <div className="w-32 skeleton-pro h-8"></div>
+        <Container className="flex items-center justify-between h-[70px]">
+          <div className="w-32 skeleton-pro h-10 rounded-md"></div>
           <div className="hidden lg:flex gap-8">
-            <div className="w-64 skeleton-pro h-4"></div>
+            <div className="w-80 skeleton-pro h-5 rounded-full"></div>
           </div>
           <div className="w-10 skeleton-pro h-10 rounded-full"></div>
         </Container>
@@ -92,7 +90,6 @@ const Navbar = () => {
   return (
     <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 transition-all duration-300 shadow-sm">
       <Container className="flex items-center justify-between h-[70px]">
-        {/* বাম পাশ: লোগো ও মোবাইল মেনু */}
         <div className="flex items-center gap-4">
           <div className="dropdown lg:hidden">
             <label
@@ -134,14 +131,12 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {/* মাঝখান: ডেস্কটপ মেনু */}
         <div className="hidden lg:flex">
-          <ul className="flex items-center gap-8 uppercase text-[13px] tracking-wider">
+          <ul className="flex items-center gap-8 uppercase text-[12px] tracking-widest">
             {menuLinks}
           </ul>
         </div>
 
-        {/* ডান পাশ: থিম ও প্রোফাইল */}
         <div className="flex items-center gap-4">
           <div className="tooltip tooltip-bottom" data-tip="Switch Theme">
             <input

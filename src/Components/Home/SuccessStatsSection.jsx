@@ -42,7 +42,6 @@ const SuccessStatsSection = () => {
   return (
     <section className="py-24 bg-base-100 dark:bg-slate-950 transition-colors duration-300 overflow-hidden">
       <Container>
-        {/* ১. সেকশন হেডার (উপরে - সেন্ট্রাল অ্যালাইনমেন্ট) */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white leading-tight">
             Our Impact in <span className="text-secondary">Numbers</span>
@@ -54,7 +53,6 @@ const SuccessStatsSection = () => {
           </p>
         </div>
 
-        {/* ২. স্ট্যাটস কার্ড গ্রিড (নিচে - ৪টি কলামে) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsData.map((stat) => (
             <div
@@ -66,7 +64,6 @@ const SuccessStatsSection = () => {
                 {stat.icon}
               </div>
 
-              {/* নাম্বার ও লেবেল */}
               <div className="space-y-2">
                 <h3 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight">
                   {stat.count}
@@ -76,12 +73,10 @@ const SuccessStatsSection = () => {
                 </h4>
               </div>
 
-              {/* বর্ণনা */}
               <p className="mt-4 text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed">
                 {stat.description}
               </p>
 
-              {/* নিচে একটি ডেকোরেটিভ লাইন */}
               <div className="mt-6 w-10 h-1 bg-slate-100 dark:bg-slate-800 group-hover:w-full group-hover:bg-secondary transition-all duration-500"></div>
             </div>
           ))}
